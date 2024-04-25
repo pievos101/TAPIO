@@ -3,7 +3,13 @@
 DATASETS = c("IONOSPHERE","GLASS", "WINE", 
     "IRIS","WDBC","ZOO")
 
+
+DATASETS = c("WDBC", "WINE", 
+    "IRIS")
+
 K = c(1,2,10,100,500,1000)
+K = c(2,5,10,30,50)
+
 D_ALL = NULL
 
 for (xx in 1:length(DATASETS)){
@@ -27,7 +33,11 @@ colnames(DATA) = c("data","ntrees","value")
 DATA$ntrees = as.factor(DATA$ntrees)
 
 
-add_lines <- data.frame(y = c(0.01, 0.13, 0.37, 0.64, 0.05, 0.83),
+add_lines1 <- data.frame(y = c(0.01, 0.13, 0.37, 0.64, 0.05, 0.83),
+                       data = DATASETS) 
+                       #effort  = rep(y, 3))
+
+add_lines2 <- data.frame(y = c(0.05, 0.37, 0.64),
                        data = DATASETS) 
                        #effort  = rep(y, 3))
 
@@ -40,9 +50,9 @@ p <- ggplot(DATA, aes(x=ntrees, y=value)) +
   #theme_bw() +
   theme_minimal()  + 
   theme(text = element_text(size=12)) +
-  #ylim(-0.025,0.025) +
+  ylim(0,1) +
   facet_wrap(~factor(data)) +
-  geom_hline(aes(yintercept = y), data = add_lines, color = "red")
+  geom_hline(aes(yintercept = y), data = add_lines2, color = "red")
 
 
   

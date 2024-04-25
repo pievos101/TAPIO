@@ -30,16 +30,16 @@ cl = cutree(hc, K)
 HC_perf = ARI(cl, labels)
 print(HC_perf)
 
-n_trees = c(1, 2, 10, 100, 500, 1000)
+n_levels = c(2, 5, 10, 30, 50)
 
-RES = matrix(NaN, n_iter, length(n_trees))
-colnames(RES) = n_trees
+RES = matrix(NaN, n_iter, length(n_levels))
+colnames(RES) = n_levels
 
 for(xx in 1:n_iter){
- for(yy in 1:length(n_trees)){
+ for(yy in 1:length(n_levels)){
 
 	# TAPIO
-	res = TAPIO(DATA, k=K, n_trees=n_trees[yy])
+	res = TAPIO(DATA, k=K, levels=n_levels[yy])
 	cl  = res$cl
 	RES[xx,yy] = ARI(cl, labels)
  } 

@@ -4,7 +4,7 @@ source("~/GitHub/TAPIO/get_dataset.R")
 library(aricode)
 
 
-DATASET = "IRIS"
+DATASET = "ZOO"
 
 res = get_dataset(DATASET)
 DATA  = res$train
@@ -20,23 +20,30 @@ K = length(unique(labels))
 
 n_iter = 50 
 
-RES = matrix(NaN, n_iter, 2)
 #DATA = scale(DATA)
 
+#HC
+hc = fastcluster::hclust(dist(DATA))
+cl = cutree(hc, K)
+HC_perf = ARI(cl, labels)
+print(HC_perf)
+
+n_trees = c(1, 2, 10, 100, 500, 1000)
+
+RES = matrix(NaN, n_iter, length(n_trees))
+colnames(RES) = n_trees
+
 for(xx in 1:n_iter){
+ for(yy in 1:length(n_trees)){
 
 	# TAPIO
-	res = TAPIO(DATA, k=K)
+	res = TAPIO(DATA, k=K, n_trees=n_trees[yy])
 	cl  = res$cl
-	RES[xx,1] = ARI(cl, labels)
-
-
-	#HC
-	hc = fastcluster::hclust(dist(DATA))
-	cl = cutree(hc, K)
-	RES[xx,2] = ARI(cl, labels)
+	RES[xx,yy] = ARI(cl, labels)
+ } 
 
 print(RES)
+print(HC_perf)
 
 }
 

@@ -6,7 +6,7 @@ library(aricode)
 #DATASETS = c("IONOSPHERE","GLASS", "WINE", 
 #    "IRIS","WDBC","ZOO")
 
-DATASET = "ZOO"
+DATASET = "IONOSPHERE"
 
 res = get_dataset(DATASET)
 DATA  = res$train
@@ -22,7 +22,7 @@ K = length(unique(labels))
 
 n_iter = 50 
 
-#DATA = scale(DATA)
+DATA = scale(DATA)
 
 #HC
 hc = fastcluster::hclust(dist(DATA))

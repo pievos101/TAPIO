@@ -5,7 +5,7 @@ library(fastcluster)
 
 
 TAPIO <- function(DATA, k, n_features=NaN, n_trees=1000, 
-						do.pca=TRUE, do.leveling=TRUE, levels=10){
+						do.pca=TRUE, do.leveling=TRUE, levels=20){
 
 	if(is.na(n_features)){
 
@@ -19,14 +19,16 @@ TAPIO <- function(DATA, k, n_features=NaN, n_trees=1000,
 	for (xx in 1:n_trees){
 
 		ids    = sample(1:ncol(DATA), n_features, replace=FALSE)
+		ids_no = (1:ncol(DATA))[-ids]
 		DATA_s = DATA[,ids]
-		
+		#print(DATA_s)
 		# PCA
 		if(do.pca){
 			res.pca = prcomp(DATA_s, scale=FALSE)
 			var.cor = t(apply(res.pca$rotation, 1, var_cor_func, res.pca$sdev))
 			var = .get_pca_var_results(var.cor)
 			IMP[[xx]] = var$contrib[,1]
+			#IMP[[xx]][ids_no] = NaN 
 			DATA_s = res.pca$x[,1] # first PCA
 		}
 
@@ -57,7 +59,7 @@ TAPIO <- function(DATA, k, n_features=NaN, n_trees=1000,
 
 
 	# Get the Importances
-	Importance = matrix(0, n_trees, ncol(DATA))
+	Importance = matrix(NaN, n_trees, ncol(DATA))
 
 	for (xx in 1:n_trees){
 
@@ -67,9 +69,9 @@ TAPIO <- function(DATA, k, n_features=NaN, n_trees=1000,
 
 	}
 
-	Importance = colMeans(Importance)
+	#Importance = colMeans(Importance)
 
-	return(list(cl=cl, feature_importance=Importance))
+	return(list(cl=cl, PART=PART, feature_importance=Importance))
 
 }
 

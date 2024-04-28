@@ -6,8 +6,6 @@ DATASETS = c("IONOSPHERE","GLASS", "WINE",
     "IRIS","WDBC","ZOO")
 
 
-DATASETS = c("ZOO", "IRIS")
-
 D_ALL = NULL
 
 for (xx in 1:length(DATASETS)){

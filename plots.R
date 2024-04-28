@@ -56,3 +56,22 @@ p <- ggplot(DATA, aes(x=ntrees, y=value)) +
 
 
   
+################################################
+colnames(DATA) = c("ID","Method","value")
+p <- ggplot(DATA, aes(x=Method, y=value, fill=Method)) +
+  geom_boxplot(outlier.shape = NA) +
+  #geom_hline(yintercept=0, linetype="dashed", color = "red", size=1) +
+  ylab("c-index") +
+  xlab("Subtyping Methods") +  
+  #theme_bw() +
+  theme_minimal()  + 
+  theme(text = element_text(size=14)) +
+  #coord_flip() +
+  geom_hline(yintercept=-log10(0.05), 
+                color = "red", linewidth=1) +
+  geom_hline(yintercept=-log10(0.01), linetype="dashed", 
+                color = "red", linewidth=0.5) +
+  ylim(0.4,0.8) 
+
+
+  

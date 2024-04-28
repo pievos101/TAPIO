@@ -9,6 +9,9 @@ IMP <- array(0, c(length(CL), length(CL), dim(res$feature_importance)[2]));
 FEATIMP = res$feature_importance
 
 for(xx in 1:(length(CL)-1)){
+
+cat(xx, " of " , length(CL)-1, " done ","\n")
+
 	for(yy in (xx+1):length(CL)){
 
 		if(CL[xx]==CL[yy]){

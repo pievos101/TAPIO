@@ -5,7 +5,8 @@ library(fastcluster)
 source("~/GitHub/TAPIO/calc_SIL.R")
 
 TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=1000, 
-						do.pca=TRUE, do.leveling=TRUE, levels=50, max.k=10){
+						do.pca=TRUE, do.leveling=TRUE, levels=10, 
+						max.k=10){
 
 	if(is.na(n_features)){
 
@@ -58,7 +59,7 @@ TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=1000,
 	
 	if(is.na(k)){
 		# find best k with Silhouette
-		print("TAPIO::Silhouette")
+		# print("TAPIO::Silhouette")
 		sil   <- calc.SIL(as.dist(DIST), size=max.k, method="ward.D")
 		#print(sil)
 		id    <- which.max(sil)

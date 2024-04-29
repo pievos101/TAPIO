@@ -6,7 +6,7 @@ library(aricode)
 #DATASETS = c("IONOSPHERE","GLASS", "WINE", 
 #    "IRIS","WDBC","ZOO")
 
-DATASET = "ZOO"
+DATASET = "GLASS"
 
 res = get_dataset(DATASET)
 DATA  = res$train
@@ -30,7 +30,7 @@ cl = cutree(hc, K)
 HC_perf = ARI(cl, labels)
 print(HC_perf)
 
-n_levels = c(2, 5, 10, 30, 50)
+n_levels = c(2, 5, 10, 30, 50, 100)
 
 RES = matrix(NaN, n_iter, length(n_levels))
 colnames(RES) = n_levels

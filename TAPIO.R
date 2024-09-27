@@ -2,10 +2,24 @@ library(HCfused)
 library(aricode)
 library(NbClust)
 library(fastcluster)
+library(FactoMineR)
 source("~/GitHub/TAPIO/calc_SIL.R")
 
 TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=1000, 
 						do.pca=TRUE, do.leveling=TRUE, levels=50, max.k=10){
+
+	if(is.list(DATA)){
+		do.pca = FALSE
+		do.MFA = TRUE
+	}
+
+	if(do.MFA){
+		group = sapply(DATA, ncol)
+		group2 = sort(rep(1:length(DATA), group))
+		group3 = tapply(1:sum(group),group2,list)
+		DATA = Reduce('cbind', DATA)
+		DATA = as.data.frame(DATA)
+	}
 
 	if(is.na(n_features)){
 
@@ -19,7 +33,16 @@ TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=1000,
 	for (xx in 1:n_trees){
 
 		ids    = sample(1:ncol(DATA), n_features, replace=FALSE)
-		ids_no = (1:ncol(DATA))[-ids]
+		#ids_no = (1:ncol(DATA))[-ids]
+
+		if(do.MFA){
+			new_ids = list()
+			for(zz in 1:length(group3)){
+				new_ids[[zz]] = sample(group3[[zz]], n_features, replace=FALSE)
+			}
+		ids = unlist(new_ids)
+		}
+
 		DATA_s = DATA[,ids]
 		#print(DATA_s)
 		# PCA
@@ -30,6 +53,17 @@ TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=1000,
 			IMP[[xx]] = var$contrib[,1]
 			#IMP[[xx]][ids_no] = NaN 
 			DATA_s = res.pca$x[,1] # first PCA
+		}
+		if(do.MFA){
+
+			# See whether there is multi-modal data
+			mm = group2[ids]
+			tt = table(mm)
+			res.MFA = FactoMineR::MFA(DATA_s, tt, graph=FALSE)
+			mfa.h = res.MFA$global.pca$ind$coord
+			mfa.w = res.MFA$quanti.var$coord
+			DATA_s = mfa.h[,1]
+			IMP[[xx]] = res.MFA$global.pca$var$contrib[,1]
 		}
 
 		# LEVELING

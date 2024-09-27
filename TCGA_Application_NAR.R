@@ -32,7 +32,7 @@ do.PAREA2 <- FALSE
 do.TAPIO <- TRUE
 
 READ = TRUE
-FULL_DATA = TRUE
+FULL_DATA = FALSE
 
 if(READ){
 cat("Reading in TCGA data ... \n")
@@ -58,7 +58,7 @@ patientsX <- intersect(intersect(rownames(mRNAX),rownames(MethyX)),rownames(miRN
 }
 
 
-n.iter=1
+n.iter=30
 
 P_SNF      <- rep(NaN,n.iter)
 P_PINS     <- rep(NaN,n.iter)
@@ -232,7 +232,7 @@ if(do.SNF){
   W1 = affinityMatrix(PSMgeneE, K, alpha)
   W2 = affinityMatrix(PSMmethy, K, alpha)
   W3 = affinityMatrix(PSMmir, K, alpha)
-  W  = SNF(list(W1,W1), K, NIT)
+  W  = SNF(list(W1,W2,W3), K, NIT)
 
 #Groups with SNF
   C = estimateNumberOfClustersGivenGraph(W)[[1]] #1 is eigen gap
@@ -250,7 +250,7 @@ if(do.SNF){
 ## PINSPLUS
  #result  <- SubtypingOmicsData(dataList = list(mRNA,Methy,miRNA), iterMin=20)
 if(do.PINSPLUS){ 
- result  <- SubtypingOmicsData(dataList = list(mRNA), iterMin=20,
+ result  <- SubtypingOmicsData(dataList = list(mRNA,Methy,miRNA), iterMin=20,
              verbose=FALSE, kMax=10, 
              clusteringMethod="kmeans")
   
@@ -266,7 +266,10 @@ if(do.PINSPLUS){
 }  
 #NEMO
 if(do.NEMO){
-  omics_list = list(as.data.frame(t(mRNA))) 
+  omics_list = list(as.data.frame(t(mRNA)), 
+                as.data.frame(t(Methy)),
+                as.data.frame(t(miRNA)))
+
   cl_nemo    = nemo.clustering(omics_list,num.neighbors=20)
   names(cl_nemo)   <- survival$PatientID
 
@@ -279,7 +282,7 @@ if(do.NEMO){
 
 if(do.HCfused){
   HC.iter=30
-  res                 <- HC_fused_subtyping(list(mRNA), max.k=10, 
+  res                 <- HC_fused_subtyping(list(mRNA, Methy, miRNA), max.k=10, 
                           HC.iter=HC.iter, use_opt_code = TRUE)
   cl_fused            <- res$cluster
 
@@ -367,7 +370,7 @@ CLIN_PAREA2[[xx]] <-  check.clinical.enrichment(cl_parea2,
 
 if(do.TAPIO){
   print("TAPIO")
-  res_tapio           <- TAPIO(mRNA, max.k=4)
+  res_tapio           <- TAPIO(list(mRNA,Methy,miRNA), max.k=4)
   cl_TAPIO            <- res_tapio$cl
 
   names(cl_TAPIO)   <- survival$PatientID

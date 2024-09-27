@@ -35,9 +35,9 @@ p <- ggplot(D_ALL, aes(x=variable, y=value, fill=cluster)) +
   #theme_bw() +
   theme_minimal()  + 
   coord_flip() +
-  theme(text = element_text(size=12)) +
-  ylim(0,1) +
-  facet_wrap(~factor(data), scales = "free") 
+  theme(text = element_text(size=11)) +
+  #ylim(0,1) +
+  facet_wrap(~factor(cluster), scales = "free") 
   
 
   

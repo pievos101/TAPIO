@@ -38,8 +38,8 @@ if(READ){
 cat("Reading in TCGA data ... \n")
 
 #aml, gbm, lung, sarcoma, colon, liver, ovarian, breast, kidney, melanoma
-cancertype <- "kidney"
-LOC <- paste("~/TCGA_data/",cancertype,"/", sep="")
+cancertype <- "liver"
+LOC <- paste("~/TCGA_data/NAR_Data/",cancertype,"/", sep="")
 
 #mRNA
 mRNAX  <- t(read.table(paste(LOC,"exp", sep="")))
@@ -370,7 +370,7 @@ CLIN_PAREA2[[xx]] <-  check.clinical.enrichment(cl_parea2,
 
 if(do.TAPIO){
   print("TAPIO")
-  res_tapio           <- TAPIO(list(mRNA,Methy,miRNA), max.k=4)
+  res_tapio           <- TAPIO(list(mRNA,Methy,miRNA), max.k=10)
   cl_TAPIO            <- res_tapio$cl
 
   names(cl_TAPIO)   <- survival$PatientID

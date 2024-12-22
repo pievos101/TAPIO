@@ -89,6 +89,7 @@ p <- ggplot(DATA, aes(x=Method, y=value, fill=Method)) +
                 color = "red", linewidth=1) +
   geom_hline(yintercept=-log10(0.01), linetype="dashed", 
                 color = "red", linewidth=0.5) +
-  ylim(0,3)
+  #ylim(0,4)
+  coord_cartesian(ylim = c(0,3))
 
   

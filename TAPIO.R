@@ -1,12 +1,12 @@
-library(HCfused)
-library(aricode)
+#library(HCfused)
+#library(aricode)
 library(NbClust)
 library(fastcluster)
 library(FactoMineR)
 source("~/GitHub/TAPIO/calc_SIL.R")
 
-TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=1000, 
-						do.pca=TRUE, do.leveling=TRUE, levels=50, max.k=10){
+TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=100, 
+						do.pca=TRUE, do.MFA=FALSE, do.leveling=TRUE, levels=50, max.k=10){
 
 	if(is.list(DATA)){
 		do.pca = FALSE

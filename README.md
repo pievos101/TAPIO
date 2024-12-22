@@ -1,4 +1,4 @@
-# TAPIO: Hierarchical Clustering with an Ensemble of Principle Component Trees for Interpretable Patient Stratification 
+# TAPIO
 
 ## Required packages
 TAPIO depends on the packages NbClust, fastcluster, and 

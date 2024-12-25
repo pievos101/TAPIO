@@ -1,4 +1,7 @@
 # TAPIO
+<p align="center">
+<img src="https://github.com/pievos101/TAPIO/blob/main/pic.jpg" width="400">
+</p>
 
 ## Required packages
 TAPIO depends on the packages NbClust, fastcluster, and 

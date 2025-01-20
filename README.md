@@ -19,10 +19,19 @@ library(FactoMineR)
 source("~/GitHub/TAPIO/TAPIO.R")
 
 data(iris)
-D = as.matrix(iris[,1:4])
+D = iris[,1:4]
+
+# custom function to implement min max scaling
+minMax <- function(x) {
+  (x - min(x, na.rm=TRUE)) / (max(x, na.rm=TRUE) - min(x, na.rm=TRUE))
+}
+
+D_norm = as.data.frame(lapply(D, minMax))
+D_norm = as.matrix(D_norm)
+
 outcome = iris[,5]
 
-res = TAPIO(D, k=3)
+res = TAPIO(D_norm, k=3, n_trees=1000, levels=3)
 
 # Check the performance of clustering
 library(aricode)

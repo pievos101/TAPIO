@@ -69,7 +69,7 @@ TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=100,
 		# LEVELING
 		if(do.leveling){
 			LEVELS = vector("list", levels)
-			hc = fastcluster::hclust(dist(DATA_s), method="ward.D")
+			hc = fastcluster::hclust(dist(DATA_s), method="ward.D2")
 			for(yy in 1:length(LEVELS)){
 				cl = cutree(hc, yy+1)
 				LEVELS[[yy]] = HCfused::association(cl)
@@ -78,7 +78,7 @@ TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=100,
 		
 		# NO LEVELING
 		}else{
-			hc = fastcluster::hclust(dist(DATA_s), method="ward.D")
+			hc = fastcluster::hclust(dist(DATA_s), method="ward.D2")
 			cl = cutree(hc, 2)
 			PART[[xx]] = HCfused::association(cl)
 		}
@@ -88,12 +88,12 @@ TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=100,
 	DIST = 1 - AFF/max(AFF)
 
 	# Final clustering
-	hc = fastcluster::hclust(as.dist(DIST), method="ward.D")
+	hc = fastcluster::hclust(as.dist(DIST), method="ward.D2")
 	
 	if(is.na(k)){
 		# find best k with Silhouette
 		print("TAPIO::Silhouette")
-		sil   <- calc.SIL(as.dist(DIST), size=max.k, method="ward.D")
+		sil   <- calc.SIL(as.dist(DIST), size=max.k, method="ward.D2")
 		#print(sil)
 		id    <- which.max(sil)
 		k     <- as.numeric(names(sil)[id])

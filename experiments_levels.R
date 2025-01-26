@@ -6,7 +6,7 @@ library(aricode)
 #DATASETS = c("IONOSPHERE","GLASS", "WINE", 
 #    "IRIS","WDBC","ZOO")
 
-DATASET = "ZOO"
+DATASET = "WDBC"
 
 res = get_dataset(DATASET)
 DATA  = res$train
@@ -22,15 +22,23 @@ K = length(unique(labels))
 
 n_iter = 50 
 
+# Normalization
 #DATA = scale(DATA)
+# custom function to implement min max scaling
+minMax <- function(x) {
+  (x - min(x, na.rm=TRUE)) / (max(x, na.rm=TRUE) - min(x, na.rm=TRUE))
+}
+
+DATA = as.data.frame(lapply(as.data.frame(DATA), minMax))
+DATA = as.matrix(DATA)
 
 #HC
-hc = fastcluster::hclust(dist(DATA))
+hc = fastcluster::hclust(dist(DATA), method="ward.D2")
 cl = cutree(hc, K)
 HC_perf = ARI(cl, labels)
 print(HC_perf)
 
-n_levels = c(2, 5, 10, 30, 50)
+n_levels = c(2, 3, 5, 10, 30)
 
 RES = matrix(NaN, n_iter, length(n_levels))
 colnames(RES) = n_levels

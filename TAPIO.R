@@ -5,8 +5,13 @@ library(fastcluster)
 library(FactoMineR)
 source("~/GitHub/TAPIO/calc_SIL.R")
 
-TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=100, 
-						do.pca=TRUE, do.MFA=FALSE, do.leveling=TRUE, levels=50, max.k=10){
+TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=500, 
+						do.pca=TRUE, do.MFA=FALSE, do.leveling=TRUE, 
+						levels=10, max.k=10){
+
+	if(ncol(DATA)==2){
+		n_features = 2
+	}
 
 	if(is.list(DATA)){
 		do.pca = FALSE
@@ -32,13 +37,13 @@ TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=100,
 
 	for (xx in 1:n_trees){
 
-		ids    = sample(1:ncol(DATA), n_features, replace=FALSE)
+		ids    = sample(1:ncol(DATA), n_features, replace=TRUE)
 		#ids_no = (1:ncol(DATA))[-ids]
 
 		if(do.MFA){
 			new_ids = list()
 			for(zz in 1:length(group3)){
-				new_ids[[zz]] = sample(group3[[zz]], n_features, replace=FALSE)
+				new_ids[[zz]] = sample(group3[[zz]], n_features, replace=TRUE)
 			}
 		ids = unlist(new_ids)
 		}
@@ -74,13 +79,14 @@ TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=100,
 				cl = cutree(hc, yy+1)
 				LEVELS[[yy]] = HCfused::association(cl)
 			}
-			PART[[xx]] = Reduce("+",LEVELS)
+			PART[[xx]] = Reduce("+",LEVELS)#/length(levels)
 		
 		# NO LEVELING
 		}else{
-			hc = fastcluster::hclust(dist(DATA_s), method="ward.D2")
-			cl = cutree(hc, 2)
-			PART[[xx]] = HCfused::association(cl)
+			#hc = fastcluster::hclust(dist(DATA_s), method="ward.D2")
+			#cl = cutree(hc, 2)
+			#PART[[xx]] = HCfused::association(cl)
+			PART[[xx]] = 1-dist(DATA_s)
 		}
 	}
 
@@ -116,7 +122,7 @@ TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=100,
 
 	#Importance = colMeans(Importance)
 
-	return(list(cl=cl, PART=PART, feature_importance=Importance))
+	return(list(cl=cl, PART=PART, feature_importance=Importance, DIST=DIST))
 
 }
 

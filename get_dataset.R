@@ -1,7 +1,119 @@
 
 # get benchmark datasets
 library(mlbench)
+library(FCPS)
+
 get_dataset <- function(DATASET){
+
+  #’Atom’, ’Chainlink, ’EngyTime’, ’GolfBall’, ’Hepta’, ’Lsun3D’,
+  #’Target’ ’Tetra’ ’TwoDiamonds’ ’WingNut
+  if(DATASET=="Atom"){ #yes
+    res = ClusterChallenge(DATASET,300)
+    train = res$Atom
+    target = res$Cls 
+    train = matrix(as.numeric(unlist(train)), nrow(train), ncol(train))
+    colnames(train) = 1:ncol(train)
+    target = as.numeric(as.factor(target))
+    k = length(unique(target))
+  } 
+
+  if(DATASET=="Target"){ #yes
+    res = ClusterChallenge(DATASET,300)
+    train = res$Target
+    target = res$Cls 
+    train = matrix(as.numeric(unlist(train)), nrow(train), ncol(train))
+    colnames(train) = 1:ncol(train)
+    target = as.numeric(as.factor(target))
+    k = length(unique(target))
+  } 
+  
+  if(DATASET=="WingNut"){ #yes
+    res = ClusterChallenge(DATASET,300)
+    train = res$WingNut
+    target = res$Cls 
+    train = matrix(as.numeric(unlist(train)), nrow(train), ncol(train))
+    colnames(train) = 1:ncol(train)
+    target = as.numeric(as.factor(target))
+    k = length(unique(target))
+  } 
+  
+
+  if(DATASET=="TwoDiamonds"){ # ARI = 1
+    res = ClusterChallenge(DATASET,300)
+    train = res$TwoDiamonds
+    target = res$Cls 
+    train = matrix(as.numeric(unlist(train)), nrow(train), ncol(train))
+    colnames(train) = 1:ncol(train)
+    target = as.numeric(as.factor(target))
+    k = length(unique(target))
+  } 
+  
+
+  if(DATASET=="Tetra"){ #no
+    res = ClusterChallenge(DATASET,300)
+    train = res$Tetra
+    target = res$Cls 
+    train = matrix(as.numeric(unlist(train)), nrow(train), ncol(train))
+    colnames(train) = 1:ncol(train)
+    target = as.numeric(as.factor(target))
+    k = length(unique(target))
+  } 
+  
+
+  if(DATASET=="Lsun3D"){ #yes!
+    res = ClusterChallenge(DATASET,300)
+    train = res$Lsun3D
+    target = res$Cls 
+    train = matrix(as.numeric(unlist(train)), nrow(train), ncol(train))
+    colnames(train) = 1:ncol(train)
+    target = as.numeric(as.factor(target))
+    k = length(unique(target))
+  } 
+  
+
+  if(DATASET=="Hepta"){ # too big?
+    res = ClusterChallenge(DATASET,300)
+    train = res$Hepta
+    target = res$Cls 
+    train = matrix(as.numeric(unlist(train)), nrow(train), ncol(train))
+    colnames(train) = 1:ncol(train)
+    target = as.numeric(as.factor(target))
+    k = length(unique(target))
+  } 
+  
+
+  if(DATASET=="GolfBall"){
+    res = ClusterChallenge(DATASET,300)
+    train = res$GolfBall
+    target = res$Cls 
+    train = matrix(as.numeric(unlist(train)), nrow(train), ncol(train))
+    colnames(train) = 1:ncol(train)
+    target = as.numeric(as.factor(target))
+    k = length(unique(target))
+  } 
+  
+
+  if(DATASET=="EngyTime"){# only two features
+    res = ClusterChallenge(DATASET,300)
+    train = res$EngyTime
+    target = res$Cls 
+    train = matrix(as.numeric(unlist(train)), nrow(train), ncol(train))
+    colnames(train) = 1:ncol(train)
+    target = as.numeric(as.factor(target))
+    k = length(unique(target))
+  } 
+  
+
+  if(DATASET=="Chainlink"){ # yes
+    res = ClusterChallenge(DATASET,300)
+    train = res$Chainlink
+    target = res$Cls 
+    train = matrix(as.numeric(unlist(train)), nrow(train), ncol(train))
+    colnames(train) = 1:ncol(train)
+    target = as.numeric(as.factor(target))
+    k = length(unique(target))
+  } 
+  
 
   if(DATASET=="ZOO"){
     data(Zoo)
@@ -118,6 +230,7 @@ get_dataset <- function(DATASET){
     train    <- as.matrix(read.table(paste0(base_name, ".data.gz")))
     target  <- scan(paste0(base_name, ".labels0.gz"), integer())
     k = length(unique(target))
+    train = train[,-2]
   }
   if(DATASET=="SMILE"){
     base_name <- file.path("~", "GitHub", "clustering-data-v1", "wut", "smile")

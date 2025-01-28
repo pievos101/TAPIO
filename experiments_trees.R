@@ -9,7 +9,7 @@ library(aricode)
   #’Atom’, ’Chainlink, ’EngyTime’, ’GolfBall’, ’Hepta’, ’Lsun3D’,
   #’Target’ ’Tetra’ ’TwoDiamonds’ ’WingNut
 
-DATASET = "IRIS"
+DATASET = "Lsun3D"
 
 res = get_dataset(DATASET)
 DATA  = res$train

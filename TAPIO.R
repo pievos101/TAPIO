@@ -10,7 +10,7 @@ TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=500,
 						levels=10, max.k=10){
 
 	if(ncol(DATA)==2){
-		n_features = 2
+		#n_features = 2
 	}
 
 	if(is.list(DATA)){

@@ -28,7 +28,7 @@ TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=500,
 
 	if(is.na(n_features)){
 
-		n_features = ceiling(sqrt(ncol(DATA)))
+		n_features = floor(sqrt(ncol(DATA)))
 
 	}
 

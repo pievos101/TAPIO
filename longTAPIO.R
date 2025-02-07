@@ -5,8 +5,8 @@ library(fastcluster)
 library(FactoMineR)
 source("~/GitHub/TAPIO/calc_SIL.R")
 source("~/GitHub/TAPIO/association.R")
-
-TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=500, 
+	
+longTAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=500, 
 						do.pca=TRUE, do.MFA=FALSE, do.leveling=TRUE, 
 						levels=10, max.k=10){
 
@@ -19,6 +19,7 @@ TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=500,
 		do.MFA = TRUE
 	}
 
+ 
 	if(do.MFA){
 		group = sapply(DATA, ncol)
 		group2 = sort(rep(1:length(DATA), group))
@@ -32,6 +33,12 @@ TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=500,
 		n_features = floor(sqrt(ncol(DATA)))
 
 	}
+
+	### Get measures from the same sample
+  N = rownames(DATA)
+  N_unique = unique(N)
+  groups = lapply(N_unique, function(x){which(x==N)})
+  ######
 
 	PART = vector("list", n_trees)
 	IMP  = vector("list", n_trees)
@@ -49,7 +56,13 @@ TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=500,
 		ids = unlist(new_ids)
 		}
 
+		# sample columns -- features 
 		DATA_s = DATA[,ids]
+
+		# sample rows - time stamps
+		ids2 = sapply(groups, sample, 1)
+		DATA_s = DATA_s[ids2, ]
+
 		#print(DATA_s)
 		# PCA
 		if(do.pca){

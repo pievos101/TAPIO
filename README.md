@@ -53,3 +53,31 @@ colnames(fimp) = colnames(iris)[1:4]
 fimp
 
 ```
+
+## Clustering longitudinal data using TAPIO
+```{r}
+source("~/GitHub/TAPIO/longTAPIO.R")
+source("~/GitHub/TAPIO/TAPIO.R")
+
+data(iris)
+D = iris[,1:4]
+
+# custom function to implement min max scaling
+minMax <- function(x) {
+  (x - min(x, na.rm=TRUE)) / (max(x, na.rm=TRUE) - min(x, na.rm=TRUE))
+}
+
+D_norm = as.data.frame(lapply(D, minMax))
+D_norm = as.matrix(D_norm)
+
+outcome = iris[,5]
+
+## define the repeated measures (toy example with iris)
+# Ten measures per sample
+rownames(D_norm) = sort(rep(1:10, 15))
+
+res = longTAPIO(D_norm, k=3, n_trees=1000, levels=3)
+
+res$cl
+
+```

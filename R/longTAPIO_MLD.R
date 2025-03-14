@@ -1,5 +1,5 @@
 #' Longitudinal hierarchical clustering with an ensemble of PCA trees
-#' (Incoperated strategy from clusterMLD using splines)
+#' (Incorporated strategy from clusterMLD using splines)
 #' 
 #' @param DATA The input data (rows: samples, columns: features) 
 #' @param user_id Identifiers to group the samples by repeated measures 
@@ -21,127 +21,127 @@
 #'@export
 
 longTAPIO_MLD <- function(DATA, user_id, obsTimes, k=NaN, n_features=NaN, n_trees=5, 
-						do.pca=TRUE, do.MFA=FALSE, do.leveling=TRUE, 
-						levels=10, max.k=10, verbose=1){
-
-	if(ncol(DATA)==2){
-		#n_features = 2
-	}
-
-	if(is.list(DATA)){
-		do.pca = FALSE
-		do.MFA = TRUE
-	}
-
-	if(do.MFA){
-		group = sapply(DATA, ncol)
-		group2 = sort(rep(1:length(DATA), group))
-		group3 = tapply(1:sum(group),group2,list)
-		DATA = Reduce('cbind', DATA)
-		DATA = as.data.frame(DATA)
-	}
-
-	if(is.na(n_features)){
-
-		n_features = floor(sqrt(ncol(DATA)))
-
-	}
-
-	PART = vector("list", n_trees)
-	IMP  = vector("list", n_trees)
-
-	for (xx in 1:n_trees){
+                          do.pca=TRUE, do.MFA=FALSE, do.leveling=TRUE, 
+                          levels=10, max.k=10, verbose=1){
+  
+  if(ncol(DATA)==2){
+    #n_features = 2
+  }
+  
+  if(is.list(DATA)){
+    do.pca = FALSE
+    do.MFA = TRUE
+  }
+  
+  if(do.MFA){
+    group = sapply(DATA, ncol)
+    group2 = sort(rep(1:length(DATA), group))
+    group3 = tapply(1:sum(group),group2,list)
+    DATA = Reduce('cbind', DATA)
+    DATA = as.data.frame(DATA)
+  }
+  
+  if(is.na(n_features)){
     
-		ids    = sample(1:ncol(DATA), n_features, replace=TRUE)
-		#ids_no = (1:ncol(DATA))[-ids]
-
-		if(do.MFA){
-			new_ids = list()
-			for(zz in 1:length(group3)){
-				new_ids[[zz]] = sample(group3[[zz]], n_features, replace=TRUE)
-			}
-		ids = unlist(new_ids)
-		}
-
-		DATA_s = DATA[,ids]
-		#print(DATA_s)
-		# PCA
-		if(do.pca){
-			res.pca = prcomp(DATA_s, scale=FALSE)
-			var.cor = t(apply(res.pca$rotation, 1, var_cor_func, res.pca$sdev))
-			var = .get_pca_var_results(var.cor)
-			IMP[[xx]] = var$contrib[,1]
-			#IMP[[xx]][ids_no] = NaN 
-			DATA_s = res.pca$x[,1] # first PCA
-		}
-		if(do.MFA){
-
-			# See whether there is multi-modal data
-			mm = group2[ids]
-			tt = table(mm)
-			res.MFA = FactoMineR::MFA(DATA_s, tt, graph=FALSE)
-			mfa.h = res.MFA$global.pca$ind$coord
-			mfa.w = res.MFA$quanti.var$coord
-			DATA_s = mfa.h[,1]
-			IMP[[xx]] = res.MFA$global.pca$var$contrib[,1]
-		}
-
-		# LEVELING
-		if(do.leveling){
-			LEVELS = vector("list", levels)
-			output = LongDataCluster(obsTimes, DATA_s, user_id)
-			#hc = fastcluster::hclust(dist(DATA_s), method="ward.D2")
-			for(yy in 1:length(LEVELS)){
-				#cl = cutree(hc, yy+1)
-			  cl = cutree_clusMLD(output, yy+1)
-				LEVELS[[yy]] = association(cl)
-			}
-			PART[[xx]] = Reduce("+",LEVELS)#/length(levels)
-		
-		# NO LEVELING
-		}else{
-			#hc = fastcluster::hclust(dist(DATA_s), method="ward.D2")
-			#cl = cutree(hc, 2)
-			#PART[[xx]] = HCfused::association(cl)
-			PART[[xx]] = 1-dist(DATA_s)
-		}
-		if (verbose) cat("done with tree ", xx, "\n")
-	}
-
-	AFF  = Reduce("+", PART)
-	DIST = 1 - AFF/max(AFF)
-
-	# Final clustering
-	hc = fastcluster::hclust(as.dist(DIST), method="ward.D2")
-	
-	if(is.na(k)){
-		# find best k with Silhouette
-		print("TAPIO::Silhouette")
-		sil   <- calc.SIL(as.dist(DIST), size=max.k, method="ward.D2")
-		#print(sil)
-		id    <- which.max(sil)
-		k     <- as.numeric(names(sil)[id])
-		cl = cutree(hc, k)
-	}else{
-		cl = cutree(hc, k)
-	}
-
-	# Get the Importances
-	Importance = matrix(NaN, n_trees, ncol(DATA))
-
-	for (xx in 1:n_trees){
-
-		imp = IMP[[xx]]
-		ids = match(names(imp), colnames(DATA))
-		#ids = match(names(imp), NN)
-		Importance[xx,ids] = imp
-
-	}
-
-	#Importance = colMeans(Importance)
-
-	return(list(cl=cl, PART=PART, feature_importance=Importance, DIST=DIST))
-
+    n_features = floor(sqrt(ncol(DATA)))
+    
+  }
+  
+  PART = vector("list", n_trees)
+  IMP  = vector("list", n_trees)
+  
+  for (xx in 1:n_trees){
+    
+    ids    = sample(1:ncol(DATA), n_features, replace=TRUE)
+    #ids_no = (1:ncol(DATA))[-ids]
+    
+    if(do.MFA){
+      new_ids = list()
+      for(zz in 1:length(group3)){
+        new_ids[[zz]] = sample(group3[[zz]], n_features, replace=TRUE)
+      }
+      ids = unlist(new_ids)
+    }
+    
+    DATA_s = DATA[,ids]
+    #print(DATA_s)
+    # PCA
+    if(do.pca){
+      res.pca = prcomp(DATA_s, scale=FALSE)
+      var.cor = t(apply(res.pca$rotation, 1, var_cor_func, res.pca$sdev))
+      var = .get_pca_var_results(var.cor)
+      IMP[[xx]] = var$contrib[,1]
+      #IMP[[xx]][ids_no] = NaN 
+      DATA_s = res.pca$x[,1] # first PCA
+    }
+    if(do.MFA){
+      
+      # See whether there is multi-modal data
+      mm = group2[ids]
+      tt = table(mm)
+      res.MFA = FactoMineR::MFA(DATA_s, tt, graph=FALSE)
+      mfa.h = res.MFA$global.pca$ind$coord
+      mfa.w = res.MFA$quanti.var$coord
+      DATA_s = mfa.h[,1]
+      IMP[[xx]] = res.MFA$global.pca$var$contrib[,1]
+    }
+    
+    # LEVELING
+    if(do.leveling){
+      LEVELS = vector("list", levels)
+      output = LongDataCluster(obsTimes, DATA_s, user_id)
+      #hc = fastcluster::hclust(dist(DATA_s), method="ward.D2")
+      for(yy in 1:length(LEVELS)){
+        #cl = cutree(hc, yy+1)
+        cl = cutree_clusMLD(output, yy+1)
+        LEVELS[[yy]] = association(cl)
+      }
+      PART[[xx]] = Reduce("+",LEVELS)#/length(levels)
+      
+      # NO LEVELING
+    }else{
+      #hc = fastcluster::hclust(dist(DATA_s), method="ward.D2")
+      #cl = cutree(hc, 2)
+      #PART[[xx]] = HCfused::association(cl)
+      PART[[xx]] = 1-dist(DATA_s)
+    }
+    if (verbose) cat("done with tree ", xx, "\n")
+  }
+  
+  AFF  = Reduce("+", PART)
+  DIST = 1 - AFF/max(AFF)
+  
+  # Final clustering
+  hc = fastcluster::hclust(as.dist(DIST), method="ward.D2")
+  
+  if(is.na(k)){
+    # find best k with Silhouette
+    print("TAPIO::Silhouette")
+    sil   <- calc.SIL(as.dist(DIST), size=max.k, method="ward.D2")
+    #print(sil)
+    id    <- which.max(sil)
+    k     <- as.numeric(names(sil)[id])
+    cl = cutree(hc, k)
+  }else{
+    cl = cutree(hc, k)
+  }
+  
+  # Get the Importances
+  Importance = matrix(NaN, n_trees, ncol(DATA))
+  
+  for (xx in 1:n_trees){
+    
+    imp = IMP[[xx]]
+    ids = match(names(imp), colnames(DATA))
+    #ids = match(names(imp), NN)
+    Importance[xx,ids] = imp
+    
+  }
+  
+  #Importance = colMeans(Importance)
+  
+  return(list(cl=cl, PART=PART, feature_importance=Importance, DIST=DIST))
+  
 }
 
 
@@ -169,8 +169,15 @@ longTAPIO_MLD <- function(DATA, user_id, obsTimes, k=NaN, n_features=NaN, n_tree
 # Correlation of variables with the principal component
 var_cor_func <- function(var.loadings, comp.sdev){var.loadings*comp.sdev}
 
-
-#cutting tree function for clusterMLD:
+#' cutting tree function for clusterMLD
+#' (Analogous to hclust::cutree)
+#' 
+#' @param output clusterMLD object returned by a call to `clusterMLD::LongDataCluster()`
+#' @param k an integer scalar with the desired number of groups
+#' @param h not used at the moment   
+#' @return `cutree_clusMLD` returns a vector with group memberships  
+#' 
+#
 cutree_clusMLD = function(output, k = NULL, h = NULL){
   clus = output$Cluster.Lists[[k]]
   clusLengths = sapply(clus, length)

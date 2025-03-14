@@ -3,7 +3,7 @@
 \name{longTAPIO_MLD}
 \alias{longTAPIO_MLD}
 \title{Longitudinal hierarchical clustering with an ensemble of PCA trees
-(Incoperated strategy from clusterMLD using splines)}
+(Incorporated strategy from clusterMLD using splines)}
 \usage{
 longTAPIO_MLD(
   DATA,
@@ -50,7 +50,7 @@ The cluster solution
 }
 \description{
 Longitudinal hierarchical clustering with an ensemble of PCA trees
-(Incoperated strategy from clusterMLD using splines)
+(Incorporated strategy from clusterMLD using splines)
 }
 \examples{
 NaN

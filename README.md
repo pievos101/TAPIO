@@ -7,16 +7,21 @@
 TAPIO depends on the packages NbClust, fastcluster, and 
 FactoMineR.
 
+## Installation
+TAPIO can be installed using the package devtools.
+
 ```{r}
-library(NbClust)
-library(fastcluster)
-library(FactoMineR)
+install.packages("devtools")
+library(devtools)
+
+devtools::install_github("pievos101/TAPIO")
+library(TAPIO)
 ```
 
 ## Clustering using TAPIO
 
 ```{r}
-source("~/GitHub/TAPIO/TAPIO.R")
+library(TAPIO)
 
 data(iris)
 D = iris[,1:4]
@@ -43,7 +48,6 @@ ARI(res$cl, outcome)
 ## Feature importance
 
 ```{r}
-source("~/GitHub/TAPIO/importance.R")
 
 fimp = importance(res)
 
@@ -56,8 +60,7 @@ fimp
 
 ## Clustering longitudinal data using TAPIO
 ```{r}
-source("~/GitHub/TAPIO/longTAPIO.R")
-source("~/GitHub/TAPIO/TAPIO.R")
+library(TAPIO)
 
 data(iris)
 D = iris[,1:4]
@@ -76,7 +79,7 @@ outcome = iris[,5]
 # Ten measures per sample
 rownames(D_norm) = sort(rep(1:10, 15))
 
-res = longTAPIO(D_norm, k=3, n_trees=1000, levels=3)
+res = longTAPIO_sample(D_norm, k=3, n_trees=1000, levels=3)
 
 res$cl
 

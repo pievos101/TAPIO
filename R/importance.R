@@ -1,4 +1,12 @@
-#
+#' Cluster-specific features importance
+#' 
+#' @param res The object returned by TAPIO. 
+#' @return Cluster-specific feature importance 
+#'
+#' @examples
+#' NaN
+#'
+#'@export
 
 importance <- function(res){
 	

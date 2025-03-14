@@ -1,19 +1,35 @@
-#library(HCfused)
-#library(aricode)
-library(NbClust)
-library(fastcluster)
-library(FactoMineR)
-source("~/GitHub/TAPIO/calc_SIL.R")
-source("~/GitHub/TAPIO/association.R")
+#' Longitudinal hierarchical clustering with an ensemble of PCA trees
+#' (Trajectories strategy)
+#' 
+#' @param DATA The input data (rows: samples, columns: features) 
+#' @param user_id Identifiers to group the samples by repeated measures 
+#' @param k Number of clusters.
+#' @param n_features Number of features to sample (default: sqrt(ncolums))
+#' @param n_trees Number of trees to grow
+#' @param do.pca Dimension reduction using PCA (default=TRUE)
+#' @param do.MFA Multi-View clustering (default=FALSE)
+#' @param do.leveling Leveling (default=TRUE)
+#' @param levels Number of levels to cut the dendrogram
+#' @param max.k Number of maximum clusters when k=NaN
+#' @param verbose Print details (default=FALSE)
+#' @return The cluster solution 
+#'
+#' @examples
+#' NaN
+#'
+#'@export
 
-TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=500, 
+longTAPIO_trajectories <- function(DATA, user_id = NULL, k=NaN, n_features=NaN, n_trees=500, 
 						do.pca=TRUE, do.MFA=FALSE, do.leveling=TRUE, 
-						levels=10, max.k=10){
+						levels=10, max.k=10, verbose = FALSE){
 
 	if(ncol(DATA)==2){
 		#n_features = 2
 	}
 
+  if (verbose) {
+    cat("data dimension:", dim(DATA), "\n")
+  }
 	if(is.list(DATA)){
 		do.pca = FALSE
 		do.MFA = TRUE
@@ -72,10 +88,18 @@ TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=500,
 			IMP[[xx]] = res.MFA$global.pca$var$contrib[,1]
 		}
 
+		#browser()
+		if (!is.null(user_id)) DATA_s = DATA_s[order(user_id)]#sort by id
 		# LEVELING
 		if(do.leveling){
 			LEVELS = vector("list", levels)
-			hc = fastcluster::hclust(dist(DATA_s), method="ward.D2")
+			if (is.null(user_id)) {
+			  d_matrix = dist(DATA_s)
+			} else {
+			  #for now this only works/makes sense for perfect time alignment:
+			  d_matrix = dist(matrix(DATA_s,nrow= length(unique(user_id)), byrow = TRUE))
+			}
+			hc = fastcluster::hclust(d_matrix, method="ward.D2")
 			for(yy in 1:length(LEVELS)){
 				cl = cutree(hc, yy+1)
 				LEVELS[[yy]] = association(cl)
@@ -87,7 +111,12 @@ TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=500,
 			#hc = fastcluster::hclust(dist(DATA_s), method="ward.D2")
 			#cl = cutree(hc, 2)
 			#PART[[xx]] = HCfused::association(cl)
-			PART[[xx]] = 1-dist(DATA_s)
+			if (is.null(user_id)) {
+			  PART[[xx]] = 1-dist(DATA_s)
+			} else {
+			  #for now this only works/makes sense for perfect time alignment:
+			  PART[[xx]] = 1- dist(matrix(DATA_s,nrow= length(unique(user_id)), byrow = TRUE))
+			}
 		}
 	}
 

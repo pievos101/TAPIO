@@ -1,12 +1,24 @@
-#library(HCfused)
-#library(aricode)
-library(NbClust)
-library(fastcluster)
-library(FactoMineR)
-source("~/GitHub/TAPIO/calc_SIL.R")
-source("~/GitHub/TAPIO/association.R")
-	
-longTAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=500, 
+#' Hierarchical clustering with an ensemble of PCA trees
+#'
+#' 
+#' @param DATA The input data (rows: samples, columns: features) 
+#' @param k Number of clusters.
+#' @param n_features Number of features to sample (default: sqrt(ncolums))
+#' @param n_trees Number of trees to grow
+#' @param do.pca Dimension reduction using PCA (default=TRUE)
+#' @param do.MFA Multi-View clustering (default=FALSE)
+#' @param do.leveling Leveling (default=TRUE)
+#' @param levels Number of levels to cut the dendrogram
+#' @param max.k Number of maximum clusters when k=NaN
+#' @return The cluster solution 
+#'
+#' @examples
+#' NaN
+#'
+#'@export
+
+
+TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=500, 
 						do.pca=TRUE, do.MFA=FALSE, do.leveling=TRUE, 
 						levels=10, max.k=10){
 
@@ -19,7 +31,6 @@ longTAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=500,
 		do.MFA = TRUE
 	}
 
- 
 	if(do.MFA){
 		group = sapply(DATA, ncol)
 		group2 = sort(rep(1:length(DATA), group))
@@ -33,12 +44,6 @@ longTAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=500,
 		n_features = floor(sqrt(ncol(DATA)))
 
 	}
-
-	### Get measures from the same sample
-  N = rownames(DATA)
-  N_unique = unique(N)
-  groups = lapply(N_unique, function(x){which(x==N)})
-  ######
 
 	PART = vector("list", n_trees)
 	IMP  = vector("list", n_trees)
@@ -56,13 +61,7 @@ longTAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=500,
 		ids = unlist(new_ids)
 		}
 
-		# sample columns -- features 
 		DATA_s = DATA[,ids]
-
-		# sample rows - time stamps
-		ids2 = sapply(groups, sample, 1)
-		DATA_s = DATA_s[ids2, ]
-
 		#print(DATA_s)
 		# PCA
 		if(do.pca){

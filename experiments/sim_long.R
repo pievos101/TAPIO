@@ -26,3 +26,7 @@ foundClusIDs = res$cl
 library(aricode)
 print(ARI(trueClusIDs,foundClusIDs))
 print(ARI(trueClusIDs,CL))
+
+
+IMP = importance(res)
+print(IMP)

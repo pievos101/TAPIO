@@ -79,7 +79,7 @@ MeanPlot <- function(Cluster.object, No.Cluster = NULL, CH = FALSE, max.plots = 
 
   p <- ggplot(fitted, aes(x, Y)) + geom_line(aes(color = grp)) +
     facet_wrap(~ylabel, nrow = Nrow) + theme_bw() +
-    theme(legend.position = "none") +
+    #theme(legend.position = "none") +
     labs(x = "Time", y = "Outcomes")
 
 return(p)

@@ -29,8 +29,48 @@ for (n in 1:n_iter) {
   
   res = TAPIO(as.matrix(train), k=k, n_trees=1000, levels=k)
 
-  print(ARI(res$cl, target))
-  print(NMI(res$cl, target))
+  cat("Iterations: ",n,"of ",n_iter,"\n")
+  #print(ARI(res$cl, target))
+  #print(NMI(res$cl, target))
   model_list[[n]] <- res
   ress[,n] <- res$cl
 }
+
+## Get importance values
+IMP_list = list()
+
+for (xx in 1:length(model_list)){
+
+   cat("Iterations: ",xx,"of ",length(model_list),"\n")
+   IMP_list[[xx]] = importance(model_list[[xx]])
+
+}
+
+# Reorganize 
+IMP_per_cluster = vector("list", nrow(IMP_list[[1]]))
+
+for (xx in 1:length(IMP_per_cluster)){
+
+  for(yy in 1:length(IMP_list)){
+
+      IMP_per_cluster[[xx]] = rbind(IMP_per_cluster[[xx]], IMP_list[[yy]][xx,])
+  }
+
+}
+
+names(IMP_per_cluster) = paste("cluster",1:length(IMP_per_cluster), sep="")
+
+library(ggplot2)
+library(reshape2)
+
+IMP_melt = melt(IMP_per_cluster)
+IMP_melt$Var2 = as.factor(IMP_melt$Var2)
+
+p = ggplot(IMP_melt, aes(x=Var2, y=value)) + 
+  geom_boxplot(notch=FALSE) +
+  #facet_wrap(. ~ variable, scales="free")
+  #facet_grid(cols = vars(L1), scales = "free_y")
+  ylab("Cluster-specific feature importance")+
+  xlab("Features") +
+  theme(text = element_text(size=15)) +
+  facet_wrap(~L1,ncol=2) 

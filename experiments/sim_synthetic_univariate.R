@@ -17,10 +17,6 @@ user_ids = rep(1:nrow(x), each = ncol(x))
 
 matplot(t(x),type="l",lty=1, col= trueClusIDs) ;grid()  
 
-
-
-
-
 ##########################################
 
 ## GGPLOT
@@ -36,3 +32,5 @@ theme_minimal()  +
 theme(text = element_text(size=15)) +
 geom_line()+
 geom_point()
+
+###################################

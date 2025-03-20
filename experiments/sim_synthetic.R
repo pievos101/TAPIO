@@ -65,12 +65,16 @@ library(reshape2)
 
 IMP_melt = melt(IMP_per_cluster)
 IMP_melt$Var2 = as.factor(IMP_melt$Var2)
+IMP_melt$Var1 = as.factor(IMP_melt$Var1)
+
 
 p = ggplot(IMP_melt, aes(x=Var2, y=value)) + 
-  geom_boxplot(notch=FALSE) +
+  #geom_boxplot(notch=FALSE) +
+  geom_bar(stat="identity") +
   #facet_wrap(. ~ variable, scales="free")
   #facet_grid(cols = vars(L1), scales = "free_y")
   ylab("Cluster-specific feature importance")+
   xlab("Features") +
   theme(text = element_text(size=15)) +
-  facet_wrap(~L1,ncol=2) 
+  facet_wrap(~Var1,ncol=2) 
+

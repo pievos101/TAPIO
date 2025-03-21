@@ -24,7 +24,7 @@ trueClusIDs  = aggregate(Longdat$Dat$label, function(x) return(x[1]),
 
 # longTAPIO_trajectories
 res = longTAPIO_trajectories(as.matrix(y_int[,1:5]), k = 4, 
-                        user_id = y_int$id, levels=4, verbose = 1, n_trees=100)
+                        user_id = y_int$id, levels=4, verbose = 1, n_trees=500)
 
 foundClusIDs = res$cl
 ari_trajectories  = ARI(trueClusIDs,foundClusIDs)
@@ -32,7 +32,7 @@ ari_trajectories  = ARI(trueClusIDs,foundClusIDs)
 # longTAPIO_MLD
 res = longTAPIO_MLD(as.matrix(Longdat$Dat[,paste("y", seq(5), sep = "_")]),
               user_id = Longdat$Dat$id, obsTimes = Longdat$Dat$obs,
-             k=4, levels=4, n_trees=100)
+             k=4, levels=4, n_trees=500)
 
 foundClusIDs = res$cl
 

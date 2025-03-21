@@ -69,11 +69,11 @@ longTAPIO_sample <- function(DATA, k=NaN, n_features=NaN, n_trees=500,
 		}
 
 		# sample columns -- features 
-		DATA_s = DATA[,ids]
+		DATA_s = DATA[,ids, drop=FALSE]
 
 		# sample rows - time stamps
 		ids2 = sapply(groups, sample, 1)
-		DATA_s = DATA_s[ids2, ]
+		DATA_s = DATA_s[ids2, , drop=FALSE]
 
 		#print(DATA_s)
 		# PCA

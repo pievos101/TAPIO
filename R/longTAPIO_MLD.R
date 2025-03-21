@@ -63,7 +63,7 @@ longTAPIO_MLD <- function(DATA, user_id, obsTimes, k=NaN, n_features=NaN, n_tree
       ids = unlist(new_ids)
     }
     
-    DATA_s = DATA[,ids]
+    DATA_s = DATA[,ids, drop=FALSE]
     #print(DATA_s)
     # PCA
     if(do.pca){

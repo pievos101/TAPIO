@@ -65,7 +65,7 @@ longTAPIO_trajectories <- function(DATA, user_id = NULL, k=NaN, n_features=NaN, 
 		ids = unlist(new_ids)
 		}
 
-		DATA_s = DATA[,ids]
+		DATA_s = DATA[,ids, drop=FALSE]
 		#print(DATA_s)
 		# PCA
 		if(do.pca){

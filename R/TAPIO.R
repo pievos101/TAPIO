@@ -65,13 +65,22 @@ TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=500,
 		#print(DATA_s)
 		# PCA
 		if(do.pca){
-			res.pca = prcomp(DATA_s, scale=FALSE)
+			# In case of missing values - us missMDA package
+			if(sum(is.na(DATA_s))){
+				warning("Use of missMDA package for Imputation")
+				require(missMDA)
+				res.comp = imputePCA(DATA_s, ncp=1)
+				res.pca = prcomp(res.comp$completeObs, scale=FALSE)
+			}else{
+				res.pca = prcomp(DATA_s, scale=FALSE)
+			}	
 			var.cor = t(apply(res.pca$rotation, 1, var_cor_func, res.pca$sdev))
 			var = .get_pca_var_results(var.cor)
 			IMP[[xx]] = var$contrib[,1]
 			#IMP[[xx]][ids_no] = NaN 
 			DATA_s = res.pca$x[,1] # first PCA
 		}
+
 		if(do.MFA){
 
 			# See whether there is multi-modal data

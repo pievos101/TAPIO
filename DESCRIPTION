@@ -1,8 +1,8 @@
 Package: TAPIO
 Type: Package
 Title: Hierarchical Clustering with an Ensemble of Principle Component Trees for Interpretable Patient Stratification. 
-Version: 1.0
-Date: 2023-01-18
+Version: 1.1
+Date: 2025-08-18
 Author: Bastian Pfeifer and Markus Loecher
 Maintainer: Bastian Pfeifer <bastianxpfeifer@gmail.com>
 Depends: R (>= 3.5.0)

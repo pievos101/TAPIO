@@ -2,7 +2,7 @@ calc.SIL <- function(mat, size, fix.k=NaN, method="ward.D"){
 
  #print(size)
  #print(fix.k)
-
+  require(cluster)
   if(method=="kmeans"){
 
    cat("Using kmeans SIL calculation ...\n")

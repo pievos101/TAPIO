@@ -24,6 +24,8 @@ longTAPIO_MLD <- function(DATA, user_id, obsTimes, k=NaN, n_features=NaN, n_tree
                           do.pca=TRUE, do.MFA=FALSE, do.leveling=TRUE, 
                           levels=10, max.k=10, verbose=1){
   
+  require(clusterMLD)
+
   if(ncol(DATA)==2){
     #n_features = 2
   }
@@ -67,7 +69,14 @@ longTAPIO_MLD <- function(DATA, user_id, obsTimes, k=NaN, n_features=NaN, n_tree
     #print(DATA_s)
     # PCA
     if(do.pca){
-      res.pca = prcomp(DATA_s, scale=FALSE)
+      if(sum(is.na(DATA_s))){
+        warning("Use of missMDA package for Imputation")
+        require(missMDA)
+        res.comp = imputePCA(DATA_s, ncp=1)
+        res.pca = prcomp(res.comp$completeObs, scale=FALSE)
+      }else{
+        res.pca = prcomp(DATA_s, scale=FALSE)
+      }
       var.cor = t(apply(res.pca$rotation, 1, var_cor_func, res.pca$sdev))
       var = .get_pca_var_results(var.cor)
       IMP[[xx]] = var$contrib[,1]

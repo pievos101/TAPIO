@@ -3,7 +3,10 @@ library(clusterMLD)
 library(MASS)
 library(aricode)
 
-load("/home/bastian/GitHub/TAPIO/experiments/Longdat_interpolated.rda")
+
+load("/home/bpfeif/GitHub/TAPIO/experiments/Longdat_interpolated.rda")
+
+
 output = LongDataCluster(Longdat$Dat$obs,
                           Longdat$Dat[,paste("y", seq(5), sep = "_")],
                           Longdat$Dat$id)

@@ -4,6 +4,22 @@ library(MASS)
 library(aricode)
 
 load("/home/bastian/GitHub/TAPIO/experiments/Longdat_interpolated.rda")
+
+######################################
+#LongDat2 = simLongData()
+
+#Longdat2_wide <- reshape(
+#  Longdat2,
+#  idvar = c("subject", "time", "cluster"),  # columns that identify each row
+#  timevar = "outcome",                      # the variable that will become columns
+#  direction = "wide"
+#)
+
+#output = LongDataCluster(Longdat2_wide$time,
+#                          Longdat2_wide[,4:ncol(Longdat2_wide)],
+#                          Longdat2_wide$subject)
+################################################
+
 output = LongDataCluster(Longdat$Dat$obs,
                           Longdat$Dat[,paste("y", seq(5), sep = "_")],
                           Longdat$Dat$id)

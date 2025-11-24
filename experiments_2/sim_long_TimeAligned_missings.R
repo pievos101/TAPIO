@@ -38,7 +38,7 @@ trueClusIDs  = aggregate(Longdat$Dat$label, function(x) return(x[1]),
 #clusterMLD::DendroPlot(output)
 #########################################################
 
-MISSFRAC = 0.50
+MISSFRAC = 0
 n_iter = 20
 RES = matrix(NaN, n_iter, 2)
 colnames(RES) = c("longTAPIO", "KML3D")

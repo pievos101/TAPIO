@@ -43,7 +43,7 @@ simLongData = function(n_total = 200, # total subjects
                        eta = 3,   # noise level; also set to 6 in some settings
                        cluster_sizes = rep(n_total / K, K),  # Balanced setting (S0)
                        ranTimes = TRUE, #random times ?
-                       n_i = 12 #number of fixed time samples (only relevant if ranTimes == FALSE)
+                       n_i = 10 #number of fixed time samples (only relevant if ranTimes == FALSE)
 ){
   # ---- Fixed effect mean functions ----
   # Each cluster has its own mean trajectory per outcome
@@ -105,7 +105,7 @@ simLongData = function(n_total = 200, # total subjects
         times <- sort(c(0, sort(runif(n_i - 1, min = 0.5, max = 11))))
       } else {
         #n_i <- 12
-        times <- seq(0,11,length = n_i)
+        times <- 1:n_i #seq(0,11,length = n_i)
       }
       
       
@@ -120,8 +120,9 @@ simLongData = function(n_total = 200, # total subjects
         for (h in 1:outcomes) {
           mu <- mean_functions[[k]][[h]](t_ij)
           y_ijh <- mu + random_effect_t + u_i[h] +
-            rnorm(1, mean = 0, sd = eta)  # You can change this to runif if needed
-          
+            #rnorm(1, mean = 0, sd = eta)  # You can change this to runif if needed
+            runif(1, min = -eta, max = eta)
+            
           sim_data[[length(sim_data) + 1]] <- data.frame(
             subject = subject_id,
             time = t_ij,

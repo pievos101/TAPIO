@@ -30,7 +30,7 @@ colnames(RES) = c("ClusterMLD","TAPIO_trajectories","TAPIO_MLD","KML3D")
 
 for(ii in 1:n_iter){
 
-    Longdat2 = simLongData(ranTimes = FALSE, 
+    Longdat2 = simLongData(ranTimes = TRUE, 
                             n_i = 10, 
                             eta = 10)
 
@@ -41,6 +41,8 @@ for(ii in 1:n_iter){
     direction = "wide"
     )
 
+    # Interpolate
+    Longdat2_wide = TimeAlign_interpolate(Longdat2_wide)
 
     trueClusIDs  = aggregate(Longdat2_wide$cluster, function(x) return(x[1]), 
                         by = list(Longdat2_wide$subject))[,2]

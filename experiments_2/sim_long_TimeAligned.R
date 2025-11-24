@@ -25,12 +25,12 @@ library(reshape)
 
 n_iter = 50
 
-RES = matrix(NaN, n_iter, 4)
-colnames(RES) = c("ClusterMLD","TAPIO_trajectories","TAPIO_MLD","KML3D")
+RES = matrix(NaN, n_iter, 3)
+colnames(RES) = c("KML3D", "TAPIO_sample", "TAPIO_trajectories")
 
 for(ii in 1:n_iter){
 
-    Longdat2 = simLongData(ranTimes = TRUE, 
+    Longdat2 = simLongData(ranTimes = FALSE, 
                             n_i = 10, 
                             eta = 10)
 
@@ -42,19 +42,26 @@ for(ii in 1:n_iter){
     )
 
     # Interpolate
-    Longdat2_wide = TimeAlign_interpolate(Longdat2_wide)
+    # Longdat2_wide = TimeAlign_interpolate(Longdat2_wide)
 
     trueClusIDs  = aggregate(Longdat2_wide$cluster, function(x) return(x[1]), 
                         by = list(Longdat2_wide$subject))[,2]
 
     ################################################
 
+    # Permute a variable 
+    #id = sample(4:ncol(Longdat2_wide), 1)
+    #vec = Longdat2_wide[,id]
+    #idds = sample(1:length(vec), length(vec), replace=FALSE)
+    #vec_perm = vec[idds]
+    #Longdat2_wide[,id] = vec_perm
 
     ############################
     # KML3D
     ############################
     library(kml3d)
 
+    print("KML3D")
     n_samples = length(unique(Longdat2_wide$subject))
     ## Plot the results
     tr1nn = array(NaN, dim = c(n_samples, 10, 5))
@@ -93,20 +100,31 @@ for(ii in 1:n_iter){
     ari_KML3D = ARI(trueClusIDs, cl)
 
     # ClusterMLD
-    output = LongDataCluster(Longdat2_wide$time,
-                            Longdat2_wide[,4:ncol(Longdat2_wide)],
-                            Longdat2_wide$subject)
-    CL = rep(NaN, length(unlist(output$Cluster.res)))
-    for(xx in 1:length(output$Cluster.res)){
-        CL[output$Cluster.res[[xx]]] = xx
-    }
-    ari_MLD  = ARI(trueClusIDs,CL)
+    #output = LongDataCluster(Longdat2_wide$time,
+    #                        Longdat2_wide[,4:ncol(Longdat2_wide)],
+    #                        Longdat2_wide$subject)
+    #CL = rep(NaN, length(unlist(output$Cluster.res)))
+    #for(xx in 1:length(output$Cluster.res)){
+    #    CL[output$Cluster.res[[xx]]] = xx
+    #}
+    #ari_MLD  = ARI(trueClusIDs,CL)
 
+    # longTAPIO_sample
+    print("longTAPIO_sample")
+    DD = as.matrix(Longdat2_wide[,4:ncol(Longdat2_wide)])
+    rownames(DD) = sort(rep(1:200, 10))
+    res = longTAPIO_sample(DD,
+                         k = 4,  levels=4, 
+                         n_trees=500, method="ward.D")
+
+    foundClusIDs = res$cl
+    ari_TAPIO_sample  = ARI(trueClusIDs,foundClusIDs)
 
     # longTAPIO_trajectories
+     print("longTAPIO_trajectories")
     res = longTAPIO_trajectories(as.matrix(Longdat2_wide[,4:ncol(Longdat2_wide)]),
                          k = 4, user_id = Longdat2_wide$subject, levels=4, 
-                         verbose = 1, n_trees=1000)
+                         verbose = 1, n_trees=500, method="ward.D")
 
     foundClusIDs = res$cl
     ari_TAPIO_trajectories  = ARI(trueClusIDs,foundClusIDs)
@@ -121,10 +139,12 @@ for(ii in 1:n_iter){
 
     #ari_TAPIO_MLD  = ARI(trueClusIDs,foundClusIDs)
 
-RES[ii,1] = ari_MLD
-RES[ii,2] = ari_TAPIO_trajectories
-RES[ii,3] = NaN #ari_TAPIO_MLD
-RES[ii,4] = ari_KML3D
+
+
+RES[ii,1] = ari_KML3D
+RES[ii,2] = ari_TAPIO_sample
+RES[ii,3] = ari_TAPIO_trajectories
+
 
 print(RES)
 
@@ -138,7 +158,7 @@ stop("All good!")
 library(ggplot2)
 library(reshape)
 
-RES_melted = melt(RES[,c(2,4)])
+RES_melted = melt(RES)
 
   
 p = ggplot(RES_melted, aes(x=X2, y=value)) + 

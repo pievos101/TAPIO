@@ -20,7 +20,7 @@
 
 longTAPIO_sample <- function(DATA, k=NaN, n_features=NaN, n_trees=500, 
 						do.pca=TRUE, do.MFA=FALSE, do.leveling=TRUE, 
-						levels=10, max.k=10){
+						levels=10, max.k=10, method="ward.D2"){
 
 	if(ncol(DATA)==2){
 		#n_features = 2
@@ -107,7 +107,7 @@ longTAPIO_sample <- function(DATA, k=NaN, n_features=NaN, n_trees=500,
 		# LEVELING
 		if(do.leveling){
 			LEVELS = vector("list", levels)
-			hc = fastcluster::hclust(dist(DATA_s), method="ward.D2")
+			hc = fastcluster::hclust(dist(DATA_s), method=method)
 			for(yy in 1:length(LEVELS)){
 				cl = cutree(hc, yy+1)
 				LEVELS[[yy]] = association(cl)
@@ -127,12 +127,12 @@ longTAPIO_sample <- function(DATA, k=NaN, n_features=NaN, n_trees=500,
 	DIST = 1 - AFF/max(AFF)
 
 	# Final clustering
-	hc = fastcluster::hclust(as.dist(DIST), method="ward.D2")
+	hc = fastcluster::hclust(as.dist(DIST), method=method)
 	
 	if(is.na(k)){
 		# find best k with Silhouette
 		print("TAPIO::Silhouette")
-		sil   <- calc.SIL(as.dist(DIST), size=max.k, method="ward.D2")
+		sil   <- calc.SIL(as.dist(DIST), size=max.k, method=method)
 		#print(sil)
 		id    <- which.max(sil)
 		k     <- as.numeric(names(sil)[id])

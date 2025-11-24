@@ -178,7 +178,7 @@ p = ggplot(RES_melted, aes(x=X2, y=value)) +
   #facet_grid(cols = vars(L1), scales = "free_y")
   ylab("Adjusted R-index")+
   xlab("Method") +
-  #ylim(0.5,1) +
+  ylim(0,1) +
   theme_minimal()  + 
   theme(text = element_text(size=15)) 
   

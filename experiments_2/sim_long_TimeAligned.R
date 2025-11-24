@@ -56,6 +56,17 @@ for(ii in 1:n_iter){
     #vec_perm = vec[idds]
     #Longdat2_wide[,id] = vec_perm
 
+    # Add noise
+    #Longdat2_wide = cbind(Longdat2_wide, 
+    #                    Longdat2_wide[,ncol(Longdat2_wide)],
+    #                    Longdat2_wide[,ncol(Longdat2_wide)],
+    #                    Longdat2_wide[,ncol(Longdat2_wide)],
+    #                    Longdat2_wide[,ncol(Longdat2_wide)],
+    #                    Longdat2_wide[,ncol(Longdat2_wide)])
+    ##########################################################
+
+
+
     ############################
     # KML3D
     ############################
@@ -115,7 +126,7 @@ for(ii in 1:n_iter){
     rownames(DD) = sort(rep(1:200, 10))
     res = longTAPIO_sample(DD,
                          k = 4,  levels=4, 
-                         n_trees=500, method="ward.D")
+                         n_trees=500, method="ward.D2")
 
     foundClusIDs = res$cl
     ari_TAPIO_sample  = ARI(trueClusIDs,foundClusIDs)
@@ -124,7 +135,7 @@ for(ii in 1:n_iter){
      print("longTAPIO_trajectories")
     res = longTAPIO_trajectories(as.matrix(Longdat2_wide[,4:ncol(Longdat2_wide)]),
                          k = 4, user_id = Longdat2_wide$subject, levels=4, 
-                         verbose = 1, n_trees=500, method="ward.D")
+                         verbose = 1, n_trees=500, method="ward.D2")
 
     foundClusIDs = res$cl
     ari_TAPIO_trajectories  = ARI(trueClusIDs,foundClusIDs)

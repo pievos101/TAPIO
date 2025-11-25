@@ -4,14 +4,14 @@ library(TAPIO)
 
 niter = 50 
 RES = matrix(NaN, niter, 3)
-colnames(RES) = c("TAPIO_sample","TAPIO_trajectories","kml")
+colnames(RES) = c("longTAPIO_sample","longTAPIO_trajectories","KML")
 
 for(xx in 1:niter){
 
    ex2 <- kml::generateArtificialLongData(
       meanTrajectories=list(function(t)0,function(t)-t,function(t)t),
       nbEachClusters=c(50,50,50),
-      residualVariation=function(t){rnorm(1,0,0.35)}
+      residualVariation=function(t){rnorm(1,0,0.50)} #0.35
    )
 
    trueClusIDs = rep(1:3,each=50)
@@ -97,5 +97,5 @@ p = ggplot(RES_melted, aes(x=X2, y=value)) +
   xlab("Method") +
   ylim(0,1) +
   theme_minimal()  + 
-  theme(text = element_text(size=15)) 
+  theme(text = element_text(size=17)) 
   

@@ -32,7 +32,7 @@ for(ii in 1:n_iter){
 
     Longdat2 = simLongData(ranTimes = TRUE, 
                             n_i = 10, 
-                            eta = 5)
+                            eta = 3)
 
     Longdat2_wide <- reshape(
     Longdat2,

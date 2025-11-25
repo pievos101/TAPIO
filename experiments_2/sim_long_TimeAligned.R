@@ -24,6 +24,7 @@ library(reshape)
 ######################################
 
 n_iter = 50
+MISSFRAC = 0 # fraction of missing data
 
 RES = matrix(NaN, n_iter, 3)
 colnames(RES) = c("KML3D", "TAPIO_sample", "TAPIO_trajectories")
@@ -65,7 +66,18 @@ for(ii in 1:n_iter){
     #                    Longdat2_wide[,ncol(Longdat2_wide)])
     ##########################################################
 
-
+    ## Add missings to INPUT
+    if(MISSFRAC!=0){
+      IN = as.matrix(Longdat2_wide[,4:ncol(Longdat2_wide)])
+      miss_frac = MISSFRAC
+      if(miss_frac!=0){ 
+          miss_perc = ceiling(length(IN)*miss_frac)
+          r_ids = sample(1:length(IN), miss_perc)
+          IN[r_ids] = NaN
+      }
+      Longdat2_wide[,4:ncol(Longdat2_wide)] = IN
+    }
+    ######################################
 
     ############################
     # KML3D
@@ -105,11 +117,20 @@ for(ii in 1:n_iter){
     )
 
     kml3d(object, nbClusters = 4, 
-            nbRedrawing = 10, toPlot = "none", parAlgo = parKml3d())
+            nbRedrawing = 10, toPlot = "none", 
+            parAlgo = parKml3d(imputationMethod = "copyMean"))
 
     cl = getClusters(object, 4)
-    ari_KML3D = ARI(trueClusIDs, cl)
+    
+    na_ids = which(is.na(cl))
+    if(length(na_ids)>0){
+      #ari_KML3D = ARI(trueClusIDs, cl)
+      ari_KML3D = ARI(trueClusIDs[-na_ids], cl[-na_ids])
+    }else{
+      ari_KML3D = ARI(trueClusIDs, cl)
+    }
 
+    
     # ClusterMLD
     #output = LongDataCluster(Longdat2_wide$time,
     #                        Longdat2_wide[,4:ncol(Longdat2_wide)],
@@ -129,8 +150,14 @@ for(ii in 1:n_iter){
                          n_trees=500, method="ward.D2")
 
     foundClusIDs = res$cl
-    ari_TAPIO_sample  = ARI(trueClusIDs,foundClusIDs)
-
+    # when KML3D produced NaNs
+    if(length(na_ids)>0){
+     #ari_TAPIO_sample  = ARI(trueClusIDs,foundClusIDs)
+     ari_TAPIO_sample  = ARI(trueClusIDs[-na_ids],foundClusIDs[-na_ids])
+    }else{
+     ari_TAPIO_sample  = ARI(trueClusIDs,foundClusIDs)
+    }
+    
     # longTAPIO_trajectories
      print("longTAPIO_trajectories")
     res = longTAPIO_trajectories(as.matrix(Longdat2_wide[,4:ncol(Longdat2_wide)]),
@@ -138,8 +165,14 @@ for(ii in 1:n_iter){
                          verbose = 1, n_trees=500, method="ward.D2")
 
     foundClusIDs = res$cl
-    ari_TAPIO_trajectories  = ARI(trueClusIDs,foundClusIDs)
-
+    # when KML3D produced NaNs
+    if(length(na_ids)>0){
+     #ari_TAPIO_trajectories  = ARI(trueClusIDs,foundClusIDs)
+     ari_TAPIO_trajectories  = ARI(trueClusIDs[-na_ids],foundClusIDs[-na_ids])
+    }else{
+     ari_TAPIO_trajectories  = ARI(trueClusIDs,foundClusIDs)
+    }
+    
     # longTAPIO_MLD
     #res = longTAPIO_MLD(as.matrix(Longdat2_wide[,4:ncol(Longdat2_wide)]),
     #            user_id =  Longdat2_wide$subject, 
@@ -149,7 +182,6 @@ for(ii in 1:n_iter){
     #foundClusIDs = res$cl
 
     #ari_TAPIO_MLD  = ARI(trueClusIDs,foundClusIDs)
-
 
 
 RES[ii,1] = ari_KML3D

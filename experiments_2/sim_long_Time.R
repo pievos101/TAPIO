@@ -81,7 +81,7 @@ for(ii in 1:n_iter){
     res = longTAPIO_MLD(as.matrix(Longdat2_wide[,4:ncol(Longdat2_wide)]),
                 user_id =  Longdat2_wide$subject, 
                 obsTimes =  Longdat2_wide$time,
-                k=4, levels=4, n_trees=10)
+                k=4, levels=4, n_trees=50)
 
     foundClusIDs = res$cl
 

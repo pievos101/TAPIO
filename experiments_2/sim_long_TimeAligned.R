@@ -33,7 +33,7 @@ for(ii in 1:n_iter){
 
     Longdat2 = simLongData(ranTimes = FALSE, 
                             n_i = 10, 
-                            eta = 20)
+                            eta = 3)
 
     Longdat2_wide <- reshape(
     Longdat2,
@@ -43,7 +43,7 @@ for(ii in 1:n_iter){
     )
 
     # Interpolate
-    # Longdat2_wide = TimeAlign_interpolate(Longdat2_wide)
+    #Longdat2_wide = TimeAlign_interpolate(Longdat2_wide)
 
     trueClusIDs  = aggregate(Longdat2_wide$cluster, function(x) return(x[1]), 
                         by = list(Longdat2_wide$subject))[,2]
@@ -148,7 +148,8 @@ for(ii in 1:n_iter){
     res = longTAPIO_sample(DD,
                          k = 4, levels=4, 
                          n_trees=1000, method="ward.D2",
-                         n_features=NaN)
+                         n_features=NaN,
+                         do.leveling=TRUE)
 
     foundClusIDs = res$cl
     # when KML3D produced NaNs
@@ -163,9 +164,10 @@ for(ii in 1:n_iter){
      print("longTAPIO_trajectories")
     DD = as.matrix(Longdat2_wide[,4:ncol(Longdat2_wide)])
     res = longTAPIO_trajectories(DD,
-                         k = 4, user_id = Longdat2_wide$subject, levels=4, 
-                         verbose = 1, n_trees=1000, method="ward.D2",
-                         n_features=NaN)
+                         k = 4, user_id = Longdat2_wide$subject, 
+                         levels=4, verbose = 1, 
+                         n_trees=1000, method="ward.D2",
+                         n_features=NaN, do.leveling=TRUE)
 
     foundClusIDs = res$cl
     # when KML3D produced NaNs

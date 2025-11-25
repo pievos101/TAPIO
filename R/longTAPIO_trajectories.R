@@ -75,7 +75,7 @@ longTAPIO_trajectories <- function(DATA, user_id = NULL, k=NaN, n_features=NaN, 
 				res.comp = imputePCA(DATA_s, ncp=1)
 				res.pca = prcomp(res.comp$completeObs, scale=FALSE)
 			}else{
-				res.pca = prcomp(DATA_s, scale=FALSE)
+				res.pca = prcomp(DATA_s, scale= FALSE)
 			}
 			var.cor = t(apply(res.pca$rotation, 1, var_cor_func, res.pca$sdev))
 			var = .get_pca_var_results(var.cor)

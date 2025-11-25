@@ -33,7 +33,7 @@ for(ii in 1:n_iter){
 
     Longdat2 = simLongData(ranTimes = FALSE, 
                             n_i = 10, 
-                            eta = 10)
+                            eta = 20)
 
     Longdat2_wide <- reshape(
     Longdat2,
@@ -146,8 +146,8 @@ for(ii in 1:n_iter){
     DD = as.matrix(Longdat2_wide[,4:ncol(Longdat2_wide)])
     rownames(DD) = sort(rep(1:200, 10))
     res = longTAPIO_sample(DD,
-                         k = 4,  levels=4, 
-                         n_trees=500, method="ward.D2",
+                         k = 4, levels=4, 
+                         n_trees=1000, method="ward.D2",
                          n_features=NaN)
 
     foundClusIDs = res$cl
@@ -161,9 +161,10 @@ for(ii in 1:n_iter){
     
     # longTAPIO_trajectories
      print("longTAPIO_trajectories")
-    res = longTAPIO_trajectories(as.matrix(Longdat2_wide[,4:ncol(Longdat2_wide)]),
+    DD = as.matrix(Longdat2_wide[,4:ncol(Longdat2_wide)])
+    res = longTAPIO_trajectories(DD,
                          k = 4, user_id = Longdat2_wide$subject, levels=4, 
-                         verbose = 1, n_trees=500, method="ward.D2",
+                         verbose = 1, n_trees=1000, method="ward.D2",
                          n_features=NaN)
 
     foundClusIDs = res$cl

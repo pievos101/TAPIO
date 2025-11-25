@@ -147,7 +147,8 @@ for(ii in 1:n_iter){
     rownames(DD) = sort(rep(1:200, 10))
     res = longTAPIO_sample(DD,
                          k = 4,  levels=4, 
-                         n_trees=500, method="ward.D2")
+                         n_trees=500, method="ward.D2",
+                         n_features=NaN)
 
     foundClusIDs = res$cl
     # when KML3D produced NaNs
@@ -162,7 +163,8 @@ for(ii in 1:n_iter){
      print("longTAPIO_trajectories")
     res = longTAPIO_trajectories(as.matrix(Longdat2_wide[,4:ncol(Longdat2_wide)]),
                          k = 4, user_id = Longdat2_wide$subject, levels=4, 
-                         verbose = 1, n_trees=500, method="ward.D2")
+                         verbose = 1, n_trees=500, method="ward.D2",
+                         n_features=NaN)
 
     foundClusIDs = res$cl
     # when KML3D produced NaNs

@@ -121,7 +121,7 @@ simLongData = function(n_total = 200, # total subjects
           mu <- mean_functions[[k]][[h]](t_ij)
           y_ijh <- mu + random_effect_t + u_i[h] +
             rnorm(1, mean = 0, sd = eta)  # You can change this to runif if needed
-            #runif(1, min = -eta, max = eta)
+            #runif(1, min = -(eta/2), max = eta/2)
             
           sim_data[[length(sim_data) + 1]] <- data.frame(
             subject = subject_id,

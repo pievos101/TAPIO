@@ -27,13 +27,13 @@ n_iter = 50
 MISSFRAC = 0 # fraction of missing data
 
 RES = matrix(NaN, n_iter, 3)
-colnames(RES) = c("KML3D", "TAPIO_sample", "TAPIO_trajectories")
+colnames(RES) = c("KML3D", "longTAPIO_sample", "longTAPIO_trajectories")
 
 for(ii in 1:n_iter){
 
     Longdat2 = simLongData(ranTimes = FALSE, 
                             n_i = 10, 
-                            eta = 6)
+                            eta = 12)
 
     Longdat2_wide <- reshape(
     Longdat2,

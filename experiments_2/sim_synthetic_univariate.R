@@ -11,7 +11,8 @@ for(xx in 1:niter){
    ex2 <- kml::generateArtificialLongData(
       meanTrajectories=list(function(t)0,function(t)-t,function(t)t),
       nbEachClusters=c(50,50,50),
-      residualVariation=function(t){rnorm(1,0,0.35)} #0.35
+      personalVariation = function(t){rnorm(1,0,3)},
+      residualVariation=function(t){rnorm(1,0,1)} #0.35
    )
 
    trueClusIDs = rep(1:3,each=50)

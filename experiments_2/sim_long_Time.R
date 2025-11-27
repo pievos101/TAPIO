@@ -32,7 +32,7 @@ for(ii in 1:n_iter){
 
     Longdat2 = simLongData(ranTimes = TRUE, 
                             n_i = 10, 
-                            eta = 6)
+                            eta = 3)
 
     Longdat2_wide <- reshape(
     Longdat2,
@@ -69,7 +69,7 @@ for(ii in 1:n_iter){
     # ClusterMLD
     output = LongDataCluster(Longdat2_wide$time,
                             Longdat2_wide[,4:ncol(Longdat2_wide)],
-                            Longdat2_wide$subject, No.Class=4)
+                            Longdat2_wide$subject)#, No.Class=4)
     CL = rep(NaN, length(unlist(output$Cluster.res)))
     for(xx in 1:length(output$Cluster.res)){
         CL[output$Cluster.res[[xx]]] = xx
@@ -81,7 +81,7 @@ for(ii in 1:n_iter){
     res = longTAPIO_MLD(as.matrix(Longdat2_wide[,4:ncol(Longdat2_wide)]),
                 user_id =  Longdat2_wide$subject, 
                 obsTimes =  Longdat2_wide$time,
-                k=4, levels=4, n_trees=10)
+                k=NaN, levels=4, n_trees=10)
 
     foundClusIDs = res$cl
 

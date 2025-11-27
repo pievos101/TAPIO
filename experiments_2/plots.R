@@ -68,8 +68,15 @@ p = ggplot(ALL_melted, aes(x=L1, y=value, fill=variable)) +
 library(ggplot2)
 library(reshape)
 
-RES = read.table("res_multivariate_mld.txt")
-  
+RES1 = read.table("res_multivariate_mld_k4.txt")
+colnames(RES1) = c("clusterMLD (k=4)", "longTAPIO_MLD (k=4)")
+
+
+RES2 = read.table("res_multivariate_mld.txt")
+colnames(RES2) = c("clusterMLD", "longTAPIO_MLD")
+
+RES = cbind(RES1, RES2)
+
 RES_melted = melt(RES)
 
 p = ggplot(RES_melted, aes(x=variable, y=value, color=variable)) + 
@@ -80,9 +87,11 @@ p = ggplot(RES_melted, aes(x=variable, y=value, color=variable)) +
   #facet_wrap(. ~ variable, scales="free")
   #facet_grid(cols = vars(L1), scales = "free_y")
   ylab("Adjusted R-index")+
-  xlab("Method") +
+  xlab("Methods") +
   #ylim(0.5,1) +
   theme_minimal()  +
-  theme(legend.position="bottom") + 
-  theme(text = element_text(size=17)) 
+  theme(legend.title = element_blank()) +
+  #theme(legend.position="bottom") + 
+  theme(text = element_text(size=17)) +
+  scale_x_discrete(labels = NULL)
   

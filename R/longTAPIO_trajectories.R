@@ -83,6 +83,10 @@ longTAPIO_trajectories <- function(DATA, user_id = NULL, k=NaN, n_features=NaN, 
 			#IMP[[xx]][ids_no] = NaN 
 			sel =  1 #sample(1:ncol(res.pca$x),1)
 			DATA_s = res.pca$x[,sel] # first PCA
+			
+			#library(rrcov)
+			#res.pca = PcaHubert(DATA_s, k = 1, scale = FALSE)
+			#DATA_s = res.pca@scores[,1] 
 		}
 		if(do.MFA){
 

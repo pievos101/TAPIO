@@ -23,16 +23,20 @@ library(reshape)
 
 ######################################
 
-n_iter = 100
+n_iter = 50
 MISSFRAC = 0 # fraction of missing data
 
 RES = matrix(NaN, n_iter, 3)
-colnames(RES) = c("KML3D", "longTAPIO_sample", "longTAPIO_trajectories")
+colnames(RES) = c("KML3D", "longTAPIO_sample", 
+              "longTAPIO_trajectories")#, "longTAPIO_MLD")
 
 for(ii in 1:n_iter){
 
     r_eta = 3 #sample(1:10,1)
-    r_sigma_diag = sample(1:6, 5, replace=TRUE)
+    r_sigma_diag = rep(3,5) #sample(1:6, 5, replace=TRUE)
+    id = sample(1:5, 1)
+    r_sigma_diag[id] =  sample(3:10, 1)
+
     print(ii)
     print(r_sigma_diag)
     Longdat2 = simLongData(ranTimes = FALSE, 
@@ -195,11 +199,23 @@ for(ii in 1:n_iter){
 
     #ari_TAPIO_MLD  = ARI(trueClusIDs,foundClusIDs)
 
+    # longTAPIO_MLD
+    #print("longTAPIO_MLD")
+    #res = longTAPIO_MLD(as.matrix(Longdat2_wide[,4:ncol(Longdat2_wide)]),
+    #            user_id =  Longdat2_wide$subject, 
+    #            obsTimes =  Longdat2_wide$time,
+    #            k=NaN, levels=4, n_trees=10)
+
+    #foundClusIDs = res$cl
+
+    #ari_TAPIO_MLD  = ARI(trueClusIDs,foundClusIDs)
+
+
 
 RES[ii,1] = ari_KML3D
 RES[ii,2] = ari_TAPIO_sample
 RES[ii,3] = ari_TAPIO_trajectories
-
+#RES[ii,4] = ari_TAPIO_MLD
 
 print(RES)
 
@@ -238,7 +254,7 @@ p = ggplot(RES_melted, aes(x=X2, y=value, fill=X2)) +
   #facet_grid(cols = vars(L1), scales = "free_y")
   ylab("Adjusted R-index")+
   xlab("Methods") +
-  #ylim(0.5,1) +
+  ylim(0,1) +
   theme_minimal()  +
   theme(legend.title = element_blank()) +
   theme(legend.position="bottom") + 

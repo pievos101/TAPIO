@@ -32,10 +32,14 @@ colnames(RES) = c("KML3D", "longTAPIO_sample", "longTAPIO_trajectories")
 for(ii in 1:n_iter){
 
     r_eta = 3 #sample(1:10,1)
+    r_sigma_diag = sample(1:6, 5, replace=TRUE)
+    print(ii)
+    print(r_sigma_diag)
     Longdat2 = simLongData(ranTimes = FALSE, 
                             n_i = 10, 
-                            eta = r_eta, 
-                            sigma_diag=rep(2,5))
+                            eta = r_eta,
+                            sigma_diag = r_sigma_diag) 
+                            #sigma_diag=rep(2,5))
 
     Longdat2_wide <- reshape(
     Longdat2,
@@ -149,7 +153,7 @@ for(ii in 1:n_iter){
     rownames(DD) = sort(rep(1:200, 10))
     res = longTAPIO_sample(DD,
                          k = 4, levels=4, #max.k=6, 
-                         n_trees=2000, method="ward.D2",
+                         n_trees=1000, method="ward.D2",
                          n_features=NaN,
                          do.leveling=TRUE)
 
@@ -169,7 +173,7 @@ for(ii in 1:n_iter){
                          k = 4, #max.k=6,
                          user_id = Longdat2_wide$subject, 
                          levels=4, verbose = 1, 
-                         n_trees=2000, method="ward.D2",
+                         n_trees=1000, method="ward.D2",
                          n_features=NaN, do.leveling=TRUE)
 
     foundClusIDs = res$cl
@@ -209,6 +213,7 @@ stop("All good!")
 library(ggplot2)
 library(reshape)
 
+RES = RES[,c(2,3,1)]
 RES_melted = melt(RES)
 
   
@@ -221,4 +226,22 @@ p = ggplot(RES_melted, aes(x=X2, y=value)) +
   ylim(0,1) +
   theme_minimal()  + 
   theme(text = element_text(size=15)) 
+  
+  ###
+
+p = ggplot(RES_melted, aes(x=X2, y=value, fill=X2)) + 
+  #geom_violin() +
+  geom_boxplot(notch=FALSE) +
+  #geom_jitter(color="black", size=0.4, alpha=0.9) +
+  #theme_ipsum() +
+  #facet_wrap(. ~ variable, scales="free")
+  #facet_grid(cols = vars(L1), scales = "free_y")
+  ylab("Adjusted R-index")+
+  xlab("Methods") +
+  #ylim(0.5,1) +
+  theme_minimal()  +
+  theme(legend.title = element_blank()) +
+  theme(legend.position="bottom") + 
+  theme(text = element_text(size=17)) +
+  scale_x_discrete(labels = NULL)
   

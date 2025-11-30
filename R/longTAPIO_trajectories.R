@@ -81,7 +81,8 @@ longTAPIO_trajectories <- function(DATA, user_id = NULL, k=NaN, n_features=NaN, 
 			var = .get_pca_var_results(var.cor)
 			IMP[[xx]] = var$contrib[,1]
 			#IMP[[xx]][ids_no] = NaN 
-			DATA_s = res.pca$x[,1] # first PCA
+			sel =  1 #sample(1:ncol(res.pca$x),1)
+			DATA_s = res.pca$x[,sel] # first PCA
 		}
 		if(do.MFA){
 

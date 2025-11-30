@@ -23,7 +23,7 @@ library(reshape)
 
 ######################################
 
-n_iter = 50
+n_iter = 100
 MISSFRAC = 0 # fraction of missing data
 
 RES = matrix(NaN, n_iter, 3)
@@ -31,9 +31,11 @@ colnames(RES) = c("KML3D", "longTAPIO_sample", "longTAPIO_trajectories")
 
 for(ii in 1:n_iter){
 
+    r_eta = 3 #sample(1:10,1)
     Longdat2 = simLongData(ranTimes = FALSE, 
                             n_i = 10, 
-                            eta = 12)
+                            eta = r_eta, 
+                            sigma_diag=rep(2,5))
 
     Longdat2_wide <- reshape(
     Longdat2,
@@ -147,7 +149,7 @@ for(ii in 1:n_iter){
     rownames(DD) = sort(rep(1:200, 10))
     res = longTAPIO_sample(DD,
                          k = 4, levels=4, #max.k=6, 
-                         n_trees=1000, method="ward.D2",
+                         n_trees=2000, method="ward.D2",
                          n_features=NaN,
                          do.leveling=TRUE)
 
@@ -167,7 +169,7 @@ for(ii in 1:n_iter){
                          k = 4, #max.k=6,
                          user_id = Longdat2_wide$subject, 
                          levels=4, verbose = 1, 
-                         n_trees=1000, method="ward.D2",
+                         n_trees=2000, method="ward.D2",
                          n_features=NaN, do.leveling=TRUE)
 
     foundClusIDs = res$cl

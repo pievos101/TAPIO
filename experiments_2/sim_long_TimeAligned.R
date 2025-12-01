@@ -23,7 +23,7 @@ library(reshape)
 
 ######################################
 
-n_iter = 50
+n_iter = 100
 MISSFRAC = 0 # fraction of missing data
 
 RES = matrix(NaN, n_iter, 3)
@@ -35,7 +35,7 @@ for(ii in 1:n_iter){
     r_eta = 3 #sample(1:10,1)
     r_sigma_diag = rep(3,5) #sample(1:6, 5, replace=TRUE)
     id = sample(1:5, 1)
-    r_sigma_diag[id] =  sample(3:15, 1)
+    r_sigma_diag[id] =  sample(3:20, 1)
 
     print(ii)
     print(r_sigma_diag)

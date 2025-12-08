@@ -60,8 +60,8 @@ survival = as.data.frame(survival)
 res = longTAPIO_MLD(as.matrix(Longdat2_wide_s[,5:ncol(Longdat2_wide_s)]),
                 user_id =  Longdat2_wide_s$num, 
                 obsTimes =  Longdat2_wide_s$time,
-                k=NaN, levels=2, n_trees=50, n_features=NaN, max.k=5,
-                method="ward.D2", replace=TRUE, scale=TRUE)
+                k=NaN, levels=5, n_trees=100, n_features=4, max.k=5,
+                method="ward.D", replace=TRUE, scale=TRUE)
 
 foundClusIDs = res$cl
 

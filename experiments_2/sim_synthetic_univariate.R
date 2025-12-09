@@ -2,7 +2,7 @@ library(kml)
 library(TAPIO)
 #library(clusterMLD)
 
-niter = 50 
+niter = 100 
 RES = matrix(NaN, niter, 3)
 colnames(RES) = c("longTAPIO_sample","longTAPIO_trajectories","KML")
 

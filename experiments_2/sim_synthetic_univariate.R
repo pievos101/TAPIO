@@ -52,7 +52,7 @@ for(xx in 1:niter){
    # Method 1 - row sampling
    DATA = matrix(as.vector(t(x)),ncol=1)
    rownames(DATA) = user_ids
-   res2 = longTAPIO_sample(DATA, k = 3, levels=3, n_trees=1000)
+   res2 = longTAPIO_sample(DATA, k = 3, levels=10, n_trees=1000, method="ward.D2")
 
    foundClusIDs = res2$cl
    #confusion matrix (well within the ambiguity of renumbering)
@@ -60,7 +60,8 @@ for(xx in 1:niter){
 
    # Method 2 - trajectories
    res = longTAPIO_trajectories(matrix(as.vector(t(x)),ncol=1), k = 3, 
-                        user_id =user_ids, levels=3, verbose = 1, n_trees=1000)
+                        user_id =user_ids, levels=10, verbose = 1, 
+                        n_trees=1000, method="ward.D2")
    foundClusIDs = res$cl
    #confusion matrix
    ari_trajectories = ARI(foundClusIDs, trueClusIDs)

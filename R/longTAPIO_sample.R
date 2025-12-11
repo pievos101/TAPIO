@@ -20,7 +20,8 @@
 
 longTAPIO_sample <- function(DATA, k=NaN, n_features=NaN, n_trees=500, 
 						do.pca=TRUE, do.MFA=FALSE, do.leveling=TRUE, 
-						levels=10, max.k=10, method="ward.D2"){
+						levels=10, max.k=10, method="ward.D2",
+						scale=TRUE, replace=TRUE){
 
 	if(ncol(DATA)==2){
 		#n_features = 2
@@ -57,13 +58,13 @@ longTAPIO_sample <- function(DATA, k=NaN, n_features=NaN, n_trees=500,
 
 	for (xx in 1:n_trees){
 
-		ids    = sample(1:ncol(DATA), n_features, replace=TRUE)
+		ids    = sample(1:ncol(DATA), n_features, replace=replace)
 		#ids_no = (1:ncol(DATA))[-ids]
 
 		if(do.MFA){
 			new_ids = list()
 			for(zz in 1:length(group3)){
-				new_ids[[zz]] = sample(group3[[zz]], n_features, replace=TRUE)
+				new_ids[[zz]] = sample(group3[[zz]], n_features, replace=replace)
 			}
 		ids = unlist(new_ids)
 		}
@@ -82,9 +83,9 @@ longTAPIO_sample <- function(DATA, k=NaN, n_features=NaN, n_trees=500,
 				warning("Use of missMDA package for Imputation")
 				require(missMDA)
 				res.comp = imputePCA(DATA_s, ncp=1)
-				res.pca = prcomp(res.comp$completeObs, scale=FALSE)
+				res.pca = prcomp(res.comp$completeObs, scale=scale)
 			}else{
-				res.pca = prcomp(DATA_s, scale=FALSE)
+				res.pca = prcomp(DATA_s, scale=scale)
 			}
 			var.cor = t(apply(res.pca$rotation, 1, var_cor_func, res.pca$sdev))
 			var = .get_pca_var_results(var.cor)

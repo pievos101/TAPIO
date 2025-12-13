@@ -60,4 +60,86 @@ fimp
 
 ## Clustering longitudinal data using TAPIO
 
-... in progress ...
+Generating some synthetic longitudinal data with regular time measures.
+
+```{r}
+library(TAPIO)
+
+Longdat = simLongData(ranTimes = FALSE)
+head(Longdat)
+
+```
+The data must be reorganized for longTAPIO.
+
+```{r}
+
+Longdat_wide <- reshape(
+    Longdat,
+    idvar = c("subject", "time", "cluster"),  # columns that identify each row
+    timevar = "outcome",                      # the variable that will become columns
+    direction = "wide"
+)
+
+head(Longdat_wide)
+
+```
+Now we run longTAPIO_sample
+
+```{r}
+DD = as.matrix(Longdat_wide[,4:ncol(Longdat_wide)]) # get the feature matrix
+rownames(DD) = sort(rep(1:200, 10)) # set rownames according to the subjects
+    
+res_sample = longTAPIO_sample(DD, k = 4, levels=4, n_trees=1000)
+
+# Get the clustering solution
+res_sample$cl
+
+```
+
+Now we run longTAPIO_trajectories
+```{r}
+DD = as.matrix(Longdat_wide[,4:ncol(Longdat_wide)])
+
+res_trajectories = longTAPIO_trajectories(DD, k = 4, 
+                         user_id = Longdat_wide$subject, 
+                         levels=4, verbose = 1, n_trees=1000)
+
+# Get the clustering solution 
+res_trajectories$cl
+```
+
+Let's generate some longitudinal data with irregeular temporal measures
+
+```{r}
+Longdat = simLongData(ranTimes = TRUE)
+head(Longdat)
+
+```
+The data must be reorganized for longTAPIO.
+
+```{r}
+
+Longdat_wide <- reshape(
+    Longdat,
+    idvar = c("subject", "time", "cluster"),  # columns that identify each row
+    timevar = "outcome",                      # the variable that will become columns
+    direction = "wide"
+)
+
+head(Longdat_wide)
+
+```
+
+Now we run longTAPIO_MLD.
+
+```{r}
+# longTAPIO_MLD
+res_MLD = longTAPIO_MLD(as.matrix(Longdat_wide[,4:ncol(Longdat_wide)]),
+                user_id =  Longdat_wide$subject, 
+                obsTimes =  Longdat_wide$time,
+                k=4, levels=4, n_trees=10)
+
+# Get the clustering solution 
+res_MLD$cl
+```
+

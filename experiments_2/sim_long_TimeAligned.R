@@ -178,7 +178,8 @@ for(ii in 1:n_iter){
                          user_id = Longdat2_wide$subject, 
                          levels=4, verbose = 1, 
                          n_trees=1000, method="ward.D2",
-                         n_features=NaN, do.leveling=TRUE)
+                         n_features=NaN, do.leveling=TRUE,
+                         pca_selection="first")
 
     foundClusIDs = res$cl
     # when KML3D produced NaNs

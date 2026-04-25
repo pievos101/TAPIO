@@ -13,6 +13,7 @@
 #' @param levels Number of levels to cut the dendrogram
 #' @param max.k Number of maximum clusters when k=NaN
 #' @param verbose Print details (default=TRUE)
+#' @param pca_selection "first" or "random_weighted"
 #' @return The cluster solution 
 #'
 #' @examples
@@ -23,7 +24,7 @@
 longTAPIO_MLD <- function(DATA, user_id, obsTimes, k=NaN, n_features=NaN, n_trees=5, 
                           do.pca=TRUE, do.MFA=FALSE, do.leveling=TRUE, 
                           levels=10, max.k=10, verbose=1, method="ward.D2",
-                          replace=TRUE, scale=TRUE){
+                          replace=TRUE, scale=TRUE, pca_selection="first"){
   
   require(clusterMLD)
 
@@ -80,9 +81,26 @@ longTAPIO_MLD <- function(DATA, user_id, obsTimes, k=NaN, n_features=NaN, n_tree
       }
       var.cor = t(apply(res.pca$rotation, 1, var_cor_func, res.pca$sdev))
       var = .get_pca_var_results(var.cor)
-      IMP[[xx]] = var$contrib[,1]
+
+      if(pca_selection == "first"){
+
+ 			   sel = 1
+
+			}
+			
+			if(pca_selection == "random_weighted"){
+
+    			eig_vals = res.pca$sdev^2
+    			prob = eig_vals / sum(eig_vals)
+
+    			sel = sample(1:length(prob), size = 1, prob = prob)
+
+			}
+
+      IMP[[xx]] = var$contrib[,sel]
       #IMP[[xx]][ids_no] = NaN 
-      DATA_s = res.pca$x[,1] # first PCA
+      DATA_s = res.pca$x[,sel] # first PCA
+
     }
     if(do.MFA){
       

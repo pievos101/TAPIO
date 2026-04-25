@@ -10,6 +10,7 @@
 #' @param do.leveling Leveling (default=TRUE)
 #' @param levels Number of levels to cut the dendrogram
 #' @param max.k Number of maximum clusters when k=NaN
+#' @param pca_selection "first" or "random_weighted"
 #' @return The cluster solution 
 #'
 #' @examples
@@ -20,7 +21,7 @@
 
 TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=500, 
 						do.pca=TRUE, do.MFA=FALSE, do.leveling=TRUE, 
-						levels=10, max.k=10){
+						levels=10, max.k=10, pca_selection="first"){
 
 	if(ncol(DATA)==2){
 		#n_features = 2
@@ -76,9 +77,25 @@ TAPIO <- function(DATA, k=NaN, n_features=NaN, n_trees=500,
 			}	
 			var.cor = t(apply(res.pca$rotation, 1, var_cor_func, res.pca$sdev))
 			var = .get_pca_var_results(var.cor)
-			IMP[[xx]] = var$contrib[,1]
+
+			if(pca_selection == "first"){
+
+ 			   sel = 1
+
+			}
+			
+			if(pca_selection == "random_weighted"){
+
+    			eig_vals = res.pca$sdev^2
+    			prob = eig_vals / sum(eig_vals)
+
+    			sel = sample(1:length(prob), size = 1, prob = prob)
+
+			}
+
+			IMP[[xx]] = var$contrib[,sel]
 			#IMP[[xx]][ids_no] = NaN 
-			DATA_s = res.pca$x[,1] # first PCA
+			DATA_s = res.pca$x[,sel] # first PCA
 		}
 
 		if(do.MFA){

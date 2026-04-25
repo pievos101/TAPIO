@@ -4,7 +4,7 @@ library(MASS)
 library(aricode)
 library(reshape)
 
-n_iter = 100
+n_iter = 50
 
 
 RES = matrix(NaN, n_iter, 2)
@@ -37,15 +37,20 @@ for(ii in 1:n_iter){
                         by = list(Longdat2_wide$subject))[,2]
 
     
+    ## Params
+    set_levels = 4
+    set_n_features = 5
+
+
     # longTAPIO_trajectories (first PCA)
      print("longTAPIO_trajectories_PCA_1")
     DD = as.matrix(Longdat2_wide[,4:ncol(Longdat2_wide)])
     res = longTAPIO_trajectories(DD,
                          k = 4, #max.k=6,
                          user_id = Longdat2_wide$subject, 
-                         levels=4, verbose = 1, 
-                         n_trees=1000, method="ward.D2",
-                         n_features=NaN, do.leveling=TRUE,
+                         levels=set_levels, verbose = 1, 
+                         n_trees=500, method="ward.D2",
+                         n_features=set_n_features, do.leveling=TRUE,
                          pca_selection="first")
 
     foundClusIDs = res$cl
@@ -57,9 +62,9 @@ for(ii in 1:n_iter){
     res = longTAPIO_trajectories(DD,
                          k = 4, #max.k=6,
                          user_id = Longdat2_wide$subject, 
-                         levels=4, verbose = 1, 
-                         n_trees=1000, method="ward.D2",
-                         n_features=NaN, do.leveling=TRUE,
+                         levels=set_levels, verbose = 1, 
+                         n_trees=500, method="ward.D2",
+                         n_features=set_n_features, do.leveling=TRUE,
                          pca_selection="random_weighted")
 
     foundClusIDs = res$cl

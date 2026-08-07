@@ -36,7 +36,7 @@ D_norm = as.matrix(D_norm)
 
 outcome = iris[,5]
 
-res = TAPIO(D_norm, k=3, n_trees=1000, levels=3)
+res = TAPIO(D_norm, k=3, n_trees=1000, levels=3, pca_selection="random_weighted")
 
 # Check the performance of clustering
 library(aricode)
@@ -82,6 +82,8 @@ Longdat_wide <- reshape(
 
 head(Longdat_wide)
 
+true_labels = unique(Longdat_wide[,c("subject","cluster")])[,"cluster"]
+
 ```
 Now we run longTAPIO_sample
 
@@ -89,10 +91,15 @@ Now we run longTAPIO_sample
 DD = as.matrix(Longdat_wide[,4:ncol(Longdat_wide)]) # get the feature matrix
 rownames(DD) = sort(rep(1:200, 10)) # set rownames according to the subjects
     
-res_sample = longTAPIO_sample(DD, k = 4, levels=4, n_trees=1000)
+res_sample = longTAPIO_sample(DD, k = 4, 
+                            levels=4, n_trees=1000,
+                            pca_selection="random_weighted")
 
 # Get the clustering solution
 res_sample$cl
+
+# Check performance
+ARI(res_sample$cl, true_labels)
 
 ```
 
@@ -102,10 +109,15 @@ DD = as.matrix(Longdat_wide[,4:ncol(Longdat_wide)])
 
 res_trajectories = longTAPIO_trajectories(DD, k = 4, 
                          user_id = Longdat_wide$subject, 
-                         levels=4, verbose = 1, n_trees=1000)
+                         levels=4, verbose = 1, n_trees=1000,
+                         pca_selection="random_weighted")
 
 # Get the clustering solution 
 res_trajectories$cl
+
+
+# Check performance
+ARI(res_trajectories$cl, true_labels)
 ```
 
 Let's generate some longitudinal data with irregeular temporal measures
@@ -128,6 +140,7 @@ Longdat_wide <- reshape(
 
 head(Longdat_wide)
 
+true_labels = unique(Longdat_wide[,c("subject","cluster")])[,"cluster"]
 ```
 
 Now we run longTAPIO_MLD.
@@ -137,9 +150,13 @@ Now we run longTAPIO_MLD.
 res_MLD = longTAPIO_MLD(as.matrix(Longdat_wide[,4:ncol(Longdat_wide)]),
                 user_id =  Longdat_wide$subject, 
                 obsTimes =  Longdat_wide$time,
-                k=4, levels=4, n_trees=10)
+                k=4, levels=4, n_trees=30,
+                pca_selection="first")
 
 # Get the clustering solution 
 res_MLD$cl
+
+# Check performance
+ARI(res_MLD$cl, true_labels)
 ```
 

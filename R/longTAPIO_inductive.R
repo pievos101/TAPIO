@@ -1,49 +1,10 @@
 # ======================================================================
-# INDUCTIVE longTAPIO
-#
-# Strict inductive and progressive/prefix extension of longTAPIO
-#
-# Main API:
-#
-#   fit <- longTAPIO_inductive(
-#       DATA,
-#       user_id,
-#       k = 4
-#   )
-#
-#   predict(
-#       fit,
-#       newdata,
-#       user_id = new_user_id,
-#       visits = 2
-#   )
-#
-#
-# Training:
-#   * feature subsets sampled on training/reference data
-#   * PCA fitted on training/reference data
-#   * PCA component sampled proportional to explained variance
-#   * hierarchical trajectory clusters learned on training data
-#   * trajectory prototypes learned on training data
-#   * final TAPIO clusters learned on training data
-#
-# Prediction:
-#   * all learned quantities remain frozen
-#   * a new patient may have only the first h visits available
-#   * new trajectory prefixes are compared with corresponding
-#     prefixes of stored training trajectory prototypes
-#
-# Current assumptions:
-#   * aligned visits
-#   * equal number of visits for training patients
-#   * prediction uses the first h visits
-#   * numeric input matrix/data.frame
-#
+# INDUCTIVE / PROGRESSIVE longTAPIO
 # ======================================================================
 
 
 # ======================================================================
-# INTERNAL: ASSOCIATION MATRIX
+# ASSOCIATION MATRIX
 # ======================================================================
 
 .longTAPIO_association <- function(cl) {
@@ -59,7 +20,7 @@
 
 
 # ======================================================================
-# INTERNAL: PREPARE TRAINING LONGITUDINAL DATA
+# PREPARE LONGITUDINAL DATA
 # ======================================================================
 
 .longTAPIO_prepare_data <- function(
@@ -78,25 +39,6 @@
     }
 
 
-    if(anyNA(user_id)) {
-
-        stop(
-            "user_id must not contain missing values."
-        )
-    }
-
-
-    if(anyNA(DATA)) {
-
-        stop(
-            paste0(
-                "Missing feature values are currently not supported ",
-                "by inductive longTAPIO."
-            )
-        )
-    }
-
-
     patients <- sort(
         unique(user_id)
     )
@@ -110,15 +52,17 @@
     if(
         length(
             unique(
-                visit_counts
+                as.integer(
+                    visit_counts
+                )
             )
         ) != 1
     ) {
 
         stop(
             paste0(
-                "inductive longTAPIO currently requires the same ",
-                "number of aligned visits for every training patient."
+                "Current implementation requires ",
+                "equal numbers of visits per patient."
             )
         )
     }
@@ -129,24 +73,26 @@
     )
 
 
-    # --------------------------------------------------------------
-    # Put complete trajectories next to each other:
+    # ------------------------------------------------------------------
+    # Patient-wise ordering.
     #
-    # patient 1: visit 1 ... T
-    # patient 2: visit 1 ... T
-    # ...
-    #
-    # Within-patient order is assumed to already represent
-    # chronological visit order.
-    # --------------------------------------------------------------
+    # Existing within-patient row order is retained.
+    # ------------------------------------------------------------------
 
     row_order <- unlist(
+
         lapply(
+
             patients,
+
             function(pid) {
-                which(user_id == pid)
+
+                which(
+                    user_id == pid
+                )
             }
         ),
+
         use.names = FALSE
     )
 
@@ -164,18 +110,27 @@
 
 
     return(
+
         list(
-            DATA = DATA,
-            user_id = user_id,
-            patients = patients,
-            n_visits = n_visits
+
+            DATA =
+                DATA,
+
+            user_id =
+                user_id,
+
+            patients =
+                patients,
+
+            n_visits =
+                n_visits
         )
     )
 }
 
 
 # ======================================================================
-# INTERNAL: EXTRACT FIRST h VISITS OF NEW PATIENTS
+# EXTRACT FIRST H VISITS
 # ======================================================================
 
 .longTAPIO_extract_prefix <- function(
@@ -187,39 +142,12 @@
     DATA <- as.matrix(DATA)
 
 
-    if(nrow(DATA) != length(user_id)) {
-
-        stop(
-            "length(user_id) must equal nrow(newdata)."
-        )
-    }
-
-
-    if(anyNA(user_id)) {
-
-        stop(
-            "user_id must not contain missing values."
-        )
-    }
-
-
-    if(anyNA(DATA)) {
-
-        stop(
-            paste0(
-                "Missing feature values are currently not supported ",
-                "during prediction."
-            )
-        )
-    }
-
-
     patients <- sort(
         unique(user_id)
     )
 
 
-    selected_rows <- integer(0)
+    rows <- integer(0)
 
 
     for(pid in patients) {
@@ -235,25 +163,16 @@
                 paste0(
                     "Patient ",
                     pid,
-                    " has only ",
-                    length(ids),
-                    " visits, but visits = ",
+                    " has fewer than ",
                     visits,
-                    " was requested."
+                    " visits."
                 )
             )
         }
 
 
-        # ----------------------------------------------------------
-        # First h visits.
-        #
-        # The order in DATA is assumed to be chronological within
-        # each patient.
-        # ----------------------------------------------------------
-
-        selected_rows <- c(
-            selected_rows,
+        rows <- c(
+            rows,
             ids[
                 seq_len(visits)
             ]
@@ -262,59 +181,39 @@
 
 
     X <- DATA[
-        selected_rows,
+        rows,
         ,
         drop = FALSE
     ]
 
 
-    # --------------------------------------------------------------
-    # Temporary consecutive patient IDs
-    # --------------------------------------------------------------
-
-    new_user_id <- rep(
+    uid <- rep(
         seq_along(patients),
         each = visits
     )
 
 
     return(
+
         list(
-            DATA = X,
-            user_id = new_user_id,
-            patients = patients
+
+            DATA =
+                X,
+
+            user_id =
+                uid,
+
+            patients =
+                patients
         )
     )
 }
 
 
 # ======================================================================
-# MAIN FITTING FUNCTION
+# FIT
 # ======================================================================
 
-#' Fit inductive longitudinal TAPIO
-#'
-#' Fits a strictly inductive longitudinal TAPIO model on a reference
-#' cohort. The fitted model can subsequently assign previously unseen
-#' patients to the learned trajectory clusters using either complete
-#' trajectories or prefixes containing only the first few visits.
-#'
-#' @param DATA Numeric matrix or data.frame. Rows correspond to visits
-#'   and columns to features.
-#' @param user_id Patient identifier for every row of DATA.
-#' @param k Number of final trajectory clusters.
-#' @param n_features Number of features sampled for each ensemble tree.
-#'   If NULL, floor(sqrt(ncol(DATA))) is used.
-#' @param n_trees Number of ensemble trees.
-#' @param levels Number of hierarchy levels used for construction of
-#'   the TAPIO affinity.
-#' @param method Hierarchical clustering method. Default is "ward.D2".
-#' @param scale Logical. Should variables be scaled during PCA?
-#' @param replace Logical. Sample features with replacement?
-#'
-#' @return Object of class "inductiveLongTAPIO".
-#'
-#' @export
 longTAPIO_inductive <- function(
     DATA,
     user_id,
@@ -327,64 +226,20 @@ longTAPIO_inductive <- function(
     replace = TRUE
 ) {
 
-    # ==============================================================
-    # BASIC CHECKS
-    # ==============================================================
-
     DATA <- as.matrix(DATA)
 
 
     if(!is.numeric(DATA)) {
-
-        stop(
-            "DATA must contain numeric features."
-        )
+        stop("DATA must contain numeric features.")
     }
 
 
-    if(nrow(DATA) != length(user_id)) {
-
+    if(anyNA(DATA)) {
         stop(
-            "length(user_id) must equal nrow(DATA)."
+            "Missing values are currently not supported."
         )
     }
 
-
-    if(ncol(DATA) < 1) {
-
-        stop(
-            "DATA must contain at least one feature."
-        )
-    }
-
-
-    if(k < 2) {
-
-        stop(
-            "k must be at least 2."
-        )
-    }
-
-
-    if(levels < 1) {
-
-        stop(
-            "levels must be at least 1."
-        )
-    }
-
-
-    if(n_trees < 1) {
-
-        stop(
-            "n_trees must be at least 1."
-        )
-    }
-
-
-    # ==============================================================
-    # PREPARE TRAINING DATA
-    # ==============================================================
 
     tmp <- .longTAPIO_prepare_data(
         DATA,
@@ -406,28 +261,14 @@ longTAPIO_inductive <- function(
     )
 
 
-    p <- ncol(
-        DATA
-    )
+    p <- ncol(DATA)
 
 
     if(is.null(n_features)) {
 
-        n_features <- floor(
-            sqrt(p)
-        )
-    }
-
-
-    n_features <- as.integer(
-        n_features
-    )
-
-
-    if(n_features < 1) {
-
-        stop(
-            "n_features must be at least 1."
+        n_features <- max(
+            1L,
+            floor(sqrt(p))
         )
     }
 
@@ -435,56 +276,42 @@ longTAPIO_inductive <- function(
     if(!replace && n_features > p) {
 
         stop(
-            paste0(
-                "n_features cannot exceed ncol(DATA) when ",
-                "replace = FALSE."
-            )
+            "n_features cannot exceed the number of features ",
+            "when replace = FALSE."
         )
     }
 
 
-    if(k > n_patients) {
+    # ==================================================================
+    # FEATURE NAMES
+    # ==================================================================
 
-        stop(
-            "k cannot exceed the number of training patients."
+    feature_names <- colnames(DATA)
+
+
+    if(is.null(feature_names)) {
+
+        feature_names <- paste0(
+            "feature_",
+            seq_len(p)
         )
+
+
+        colnames(DATA) <-
+            feature_names
     }
 
 
-    if((levels + 1) > n_patients) {
-
-        stop(
-            paste0(
-                "levels + 1 cannot exceed the number ",
-                "of training patients."
-            )
-        )
-    }
-
-
-    # ==============================================================
-    # STORE FEATURE NAMES
-    # ==============================================================
-
-    feature_names <- colnames(
-        DATA
-    )
-
-
-    # ==============================================================
-    # AFFINITY MATRIX
-    # ==============================================================
+    # ==================================================================
+    # STORAGE
+    # ==================================================================
 
     AFF <- matrix(
         0,
-        nrow = n_patients,
-        ncol = n_patients
+        n_patients,
+        n_patients
     )
 
-
-    # ==============================================================
-    # TREE STORAGE
-    # ==============================================================
 
     TREES <- vector(
         "list",
@@ -492,21 +319,21 @@ longTAPIO_inductive <- function(
     )
 
 
-    # ==============================================================
-    # ENSEMBLE
-    # ==============================================================
+    # ==================================================================
+    # TREE ENSEMBLE
+    # ==================================================================
 
-    for(tree_id in seq_len(
+    for(b in seq_len(
         n_trees
     )) {
 
-        # ==========================================================
-        # RANDOM FEATURE SUBSET
-        # ==========================================================
+        # --------------------------------------------------------------
+        # Random feature sampling
+        # --------------------------------------------------------------
 
         ids <- sample(
             seq_len(p),
-            size = n_features,
+            n_features,
             replace = replace
         )
 
@@ -518,70 +345,91 @@ longTAPIO_inductive <- function(
         ]
 
 
-        # ==========================================================
-        # PCA
-        #
-        # IMPORTANT:
-        # This PCA is fitted exclusively on reference/training data.
-        # ==========================================================
+        # --------------------------------------------------------------
+        # PCA -- TRAINING DATA ONLY
+        # --------------------------------------------------------------
 
-        pca <- stats::prcomp(
+        pca <- prcomp(
             DATA_s,
             center = TRUE,
             scale. = scale
         )
 
 
-        # ==========================================================
-        # RANDOM EIGENVALUE-WEIGHTED COMPONENT SELECTION
-        #
-        # P(PC = j) =
-        #
-        #       lambda_j
-        # ---------------------
-        # sum_r lambda_r
-        #
-        # ==========================================================
-
-        eigenvalues <- pca$sdev^2
+        eigenvalues <-
+            pca$sdev^2
 
 
-        probabilities <- eigenvalues /
-            sum(
-                eigenvalues
-            )
+        prob <-
+            eigenvalues /
+            sum(eigenvalues)
 
 
         selected_pc <- sample(
-            seq_along(
-                probabilities
-            ),
+            seq_along(prob),
             size = 1,
-            prob = probabilities
+            prob = prob
         )
 
 
-        # ==========================================================
-        # PCA SCORE OF EVERY TRAINING VISIT
-        # ==========================================================
-
-        scores <- pca$x[
-            ,
-            selected_pc
-        ]
+        scores <- drop(
+            pca$x[
+                ,
+                selected_pc
+            ]
+        )
 
 
-        # ==========================================================
-        # PATIENT TRAJECTORIES
+        # ==============================================================
+        # FEATURE CONTRIBUTION
+        # ==============================================================
+
+        pc_cor <-
+            pca$rotation[
+                ,
+                selected_pc
+            ] *
+            pca$sdev[
+                selected_pc
+            ]
+
+
+        feature_contribution <-
+            pc_cor^2
+
+
+        contribution_sum <-
+            sum(
+                feature_contribution
+            )
+
+
+        if(
+            is.finite(contribution_sum) &&
+            contribution_sum > 0
+        ) {
+
+            feature_contribution <-
+                feature_contribution /
+                contribution_sum
+
+        } else {
+
+            feature_contribution[] <- 0
+        }
+
+
+        # Original feature IDs.
         #
-        #               visit
-        #             1 ... T
-        #
-        # patient 1   z ... z
-        # patient 2   z ... z
-        # ...
-        #
-        # ==========================================================
+        # Duplicates are intentional when replace = TRUE.
+
+        names(feature_contribution) <-
+            as.character(ids)
+
+
+        # ==============================================================
+        # COMPLETE PATIENT TRAJECTORIES
+        # ==============================================================
 
         trajectories <- matrix(
             scores,
@@ -591,103 +439,87 @@ longTAPIO_inductive <- function(
         )
 
 
-        rownames(
-            trajectories
-        ) <- as.character(
-            patients
-        )
+        rownames(trajectories) <-
+            as.character(
+                patients
+            )
 
 
-        # ==========================================================
-        # HIERARCHICAL CLUSTERING OF TRAJECTORIES
-        # ==========================================================
-
-        trajectory_distance <- stats::dist(
-            trajectories
-        )
-
+        # ==============================================================
+        # HIERARCHICAL CLUSTERING
+        # ==============================================================
 
         hc <- fastcluster::hclust(
-            trajectory_distance,
+            dist(trajectories),
             method = method
         )
 
 
-        # ==========================================================
-        # STORAGE FOR HIERARCHY
-        # ==========================================================
-
-        level_clusters <- vector(
+        LEVEL_CLUSTERS <- vector(
             "list",
             levels
         )
 
 
-        level_centroids <- vector(
+        LEVEL_CENTROIDS <- vector(
             "list",
             levels
         )
 
 
-        # ==========================================================
-        # CUT DENDROGRAM AT MULTIPLE LEVELS
-        # ==========================================================
+        # ==============================================================
+        # HIERARCHY LEVELS
+        # ==============================================================
 
-        for(level_id in seq_len(
+        for(l in seq_len(
             levels
         )) {
 
-            n_level_clusters <- level_id + 1
-
-
-            cl <- stats::cutree(
+            cl <- cutree(
                 hc,
-                k = n_level_clusters
+                k = l + 1
             )
 
 
-            level_clusters[[level_id]] <- cl
+            LEVEL_CLUSTERS[[l]] <-
+                cl
 
-
-            # ======================================================
-            # TRAJECTORY CENTROID OF EACH HIERARCHY CLUSTER
-            # ======================================================
 
             cluster_ids <- sort(
-                unique(
-                    cl
-                )
+                unique(cl)
             )
 
 
             centroids <- matrix(
                 NA_real_,
-                nrow = length(cluster_ids),
+                nrow = length(
+                    cluster_ids
+                ),
                 ncol = n_visits
             )
 
 
-            rownames(
-                centroids
-            ) <- as.character(
-                cluster_ids
-            )
+            rownames(centroids) <-
+                as.character(
+                    cluster_ids
+                )
 
 
-            for(j in seq_along(
+            for(cc in seq_along(
                 cluster_ids
             )) {
 
-                cluster_id <- cluster_ids[j]
+                cid <-
+                    cluster_ids[cc]
 
 
                 members <- which(
-                    cl == cluster_id
+                    cl == cid
                 )
 
 
                 centroids[
-                    j,
+                    cc,
                 ] <- colMeans(
                     trajectories[
                         members,
@@ -698,12 +530,9 @@ longTAPIO_inductive <- function(
             }
 
 
-            level_centroids[[level_id]] <- centroids
+            LEVEL_CENTROIDS[[l]] <-
+                centroids
 
-
-            # ======================================================
-            # ADD LEVEL CO-MEMBERSHIP
-            # ======================================================
 
             AFF <- AFF +
                 .longTAPIO_association(
@@ -712,11 +541,11 @@ longTAPIO_inductive <- function(
         }
 
 
-        # ==========================================================
+        # ==============================================================
         # STORE FROZEN TREE
-        # ==========================================================
+        # ==============================================================
 
-        TREES[[tree_id]] <- list(
+        TREES[[b]] <- list(
 
             feature_ids =
                 ids,
@@ -741,21 +570,24 @@ longTAPIO_inductive <- function(
                     selected_pc
                 ],
 
+            feature_contribution =
+                feature_contribution,
+
             train_trajectories =
                 trajectories,
 
             level_clusters =
-                level_clusters,
+                LEVEL_CLUSTERS,
 
             level_centroids =
-                level_centroids
+                LEVEL_CENTROIDS
         )
     }
 
 
-    # ==============================================================
-    # NORMALIZED TAPIO AFFINITY
-    # ==============================================================
+    # ==================================================================
+    # NORMALIZED TRAINING AFFINITY
+    # ==================================================================
 
     AFF <- AFF /
         (
@@ -764,46 +596,36 @@ longTAPIO_inductive <- function(
         )
 
 
-    # ==============================================================
-    # DISTANCE
-    # ==============================================================
-
     DIST <- 1 - AFF
 
-
-    diag(
-        DIST
-    ) <- 0
+    diag(DIST) <- 0
 
 
-    # ==============================================================
-    # FINAL REFERENCE CLUSTERING
-    # ==============================================================
+    # ==================================================================
+    # FINAL TRAINING CLUSTERING
+    # ==================================================================
 
-    final_hc <- fastcluster::hclust(
-        stats::as.dist(
-            DIST
-        ),
+    final_hclust <- fastcluster::hclust(
+        as.dist(DIST),
         method = method
     )
 
 
-    final_clusters <- stats::cutree(
-        final_hc,
+    final_clusters <- cutree(
+        final_hclust,
         k = k
     )
 
 
-    names(
-        final_clusters
-    ) <- as.character(
-        patients
-    )
+    names(final_clusters) <-
+        as.character(
+            patients
+        )
 
 
-    # ==============================================================
-    # CONSTRUCT MODEL
-    # ==============================================================
+    # ==================================================================
+    # MODEL
+    # ==================================================================
 
     model <- list(
 
@@ -832,7 +654,7 @@ longTAPIO_inductive <- function(
             DIST,
 
         final_hclust =
-            final_hc,
+            final_hclust,
 
         k =
             k,
@@ -869,20 +691,16 @@ longTAPIO_inductive <- function(
     )
 
 
-    class(
-        model
-    ) <- "inductiveLongTAPIO"
+    class(model) <-
+        "inductiveLongTAPIO"
 
 
-    return(
-        model
-    )
+    return(model)
 }
 
 
 # ======================================================================
-# INTERNAL:
-# PROJECT NEW PREFIX THROUGH ONE FROZEN TREE
+# PROJECT PREFIX THROUGH ONE FROZEN TREE
 # ======================================================================
 
 .longTAPIO_project_prefix <- function(
@@ -892,32 +710,31 @@ longTAPIO_inductive <- function(
     visits
 ) {
 
-    # ==============================================================
-    # EXACT SAME FEATURE POSITIONS AS TRAINING
-    # ==============================================================
+    DATA <- as.matrix(DATA)
 
-    X <- DATA[
+
+    Xs <- DATA[
         ,
         tree$feature_ids,
         drop = FALSE
     ]
 
 
-    # ==============================================================
-    # FROZEN TRAINING PCA CENTER
-    # ==============================================================
+    # ------------------------------------------------------------------
+    # Frozen PCA center
+    # ------------------------------------------------------------------
 
-    X <- sweep(
-        X,
-        MARGIN = 2,
-        STATS = tree$pca_center,
-        FUN = "-"
+    Xs <- sweep(
+        Xs,
+        2,
+        tree$pca_center,
+        "-"
     )
 
 
-    # ==============================================================
-    # FROZEN TRAINING PCA SCALE
-    # ==============================================================
+    # ------------------------------------------------------------------
+    # Frozen PCA scale
+    # ------------------------------------------------------------------
 
     if(
         !is.null(
@@ -929,28 +746,28 @@ longTAPIO_inductive <- function(
         )
     ) {
 
-        X <- sweep(
-            X,
-            MARGIN = 2,
-            STATS = tree$pca_scale,
-            FUN = "/"
+        Xs <- sweep(
+            Xs,
+            2,
+            tree$pca_scale,
+            "/"
         )
     }
 
 
-    # ==============================================================
-    # FROZEN PCA PROJECTION
-    # ==============================================================
+    # ------------------------------------------------------------------
+    # Frozen selected PC
+    # ------------------------------------------------------------------
 
     scores <- drop(
-        X %*%
-            tree$pca_rotation
+        Xs %*%
+        tree$pca_rotation
     )
 
 
-    # ==============================================================
-    # RECONSTRUCT PREFIX TRAJECTORIES
-    # ==============================================================
+    # ------------------------------------------------------------------
+    # Patient x prefix trajectory
+    # ------------------------------------------------------------------
 
     trajectories <- matrix(
         scores,
@@ -967,8 +784,8 @@ longTAPIO_inductive <- function(
 
 
 # ======================================================================
-# INTERNAL:
-# ONE TREE PREFIX AFFINITY
+# ONE TREE:
+# PREFIX -> TRAINING AFFINITY
 # ======================================================================
 
 .longTAPIO_tree_prefix_affinity <- function(
@@ -989,46 +806,43 @@ longTAPIO_inductive <- function(
 
     A <- matrix(
         0,
-        nrow = n_new,
-        ncol = n_train
+        n_new,
+        n_train
     )
 
 
-    # ==============================================================
-    # EACH STORED HIERARCHY LEVEL
-    # ==============================================================
-
-    for(level_id in seq_along(
+    for(l in seq_along(
         tree$level_clusters
     )) {
 
-        train_level_cluster <-
-            tree$level_clusters[[level_id]]
+        train_cl <-
+            tree$level_clusters[[l]]
 
 
         full_centroids <-
-            tree$level_centroids[[level_id]]
+            tree$level_centroids[[l]]
 
 
-        # ==========================================================
-        # PREFIX OF STORED COMPLETE TRAJECTORY PROTOTYPES
-        # ==========================================================
+        # --------------------------------------------------------------
+        # Prefix of frozen full-trajectory prototypes
+        # --------------------------------------------------------------
 
-        prefix_centroids <- full_centroids[
+        centroids <- full_centroids[
             ,
             seq_len(visits),
             drop = FALSE
         ]
 
 
-        # ==========================================================
-        # ASSIGN NEW PATIENT TO CLOSEST PROTOTYPE
-        # ==========================================================
+        cluster_ids <-
+            as.integer(
+                rownames(centroids)
+            )
 
-        predicted_level_cluster <- integer(
-            n_new
-        )
 
+        # --------------------------------------------------------------
+        # Nearest frozen prototype
+        # --------------------------------------------------------------
 
         for(i in seq_len(
             n_new
@@ -1041,313 +855,55 @@ longTAPIO_inductive <- function(
             ]
 
 
-            # ------------------------------------------------------
-            # Squared Euclidean distance
-            # ------------------------------------------------------
+            distances <- apply(
 
-            distances <- rowSums(
-                (
-                    prefix_centroids -
-                    matrix(
-                        z,
-                        nrow = nrow(
-                            prefix_centroids
-                        ),
-                        ncol = visits,
-                        byrow = TRUE
+                centroids,
+
+                1,
+
+                function(mu) {
+
+                    sum(
+                        (z - mu)^2
                     )
-                )^2
-            )
-
-
-            predicted_level_cluster[i] <-
-                as.integer(
-                    rownames(
-                        prefix_centroids
-                    )[
-                        which.min(
-                            distances
-                        )
-                    ]
-                )
-        }
-
-
-        # ==========================================================
-        # NEW -> TRAIN CO-MEMBERSHIP AT THIS LEVEL
-        # ==========================================================
-
-        A <- A +
-            outer(
-                predicted_level_cluster,
-                train_level_cluster,
-                FUN = function(a, b) {
-                    as.numeric(a == b)
                 }
             )
+
+
+            new_cl <-
+                cluster_ids[
+                    which.min(
+                        distances
+                    )
+                ]
+
+
+            A[i, ] <- A[i, ] +
+                as.numeric(
+                    train_cl ==
+                    new_cl
+                )
+        }
     }
 
 
-    return(
-        A
-    )
+    return(A)
 }
 
 
 # ======================================================================
-# INTERNAL:
-# COMPLETE NEW -> TRAIN PREFIX AFFINITY
+# ENSEMBLE PREFIX AFFINITY
 # ======================================================================
 
 .longTAPIO_predict_affinity <- function(
     object,
     DATA,
+    user_id,
     visits
 ) {
 
-    n_new <- nrow(
-        DATA
-    ) / visits
-
-
-    if(
-        n_new != floor(
-            n_new
-        )
-    ) {
-
-        stop(
-            "The number of prefix rows is inconsistent with visits."
-        )
-    }
-
-
-    n_new <- as.integer(
-        n_new
-    )
-
-
-    n_train <- length(
-        object$train_clusters
-    )
-
-
-    AFF_NEW <- matrix(
-        0,
-        nrow = n_new,
-        ncol = n_train
-    )
-
-
-    # ==============================================================
-    # ENSEMBLE
-    # ==============================================================
-
-    for(tree_id in seq_len(
-        object$n_trees
-    )) {
-
-        tree <- object$trees[
-            [tree_id]
-        ]
-
-
-        # ==========================================================
-        # PROJECT PREFIX
-        # ==========================================================
-
-        new_trajectories <-
-            .longTAPIO_project_prefix(
-                tree = tree,
-                DATA = DATA,
-                n_patients = n_new,
-                visits = visits
-            )
-
-
-        # ==========================================================
-        # TREE AFFINITY
-        # ==========================================================
-
-        AFF_NEW <- AFF_NEW +
-            .longTAPIO_tree_prefix_affinity(
-                tree = tree,
-                new_trajectories = new_trajectories,
-                visits = visits
-            )
-    }
-
-
-    # ==============================================================
-    # NORMALIZATION
-    # ==============================================================
-
-    AFF_NEW <- AFF_NEW /
-        (
-            object$n_trees *
-            object$levels
-        )
-
-
-    colnames(
-        AFF_NEW
-    ) <- as.character(
-        object$train_patients
-    )
-
-
-    return(
-        AFF_NEW
-    )
-}
-
-
-# ======================================================================
-# PREDICT METHOD
-# ======================================================================
-
-#' Predict clusters for new patients using inductive longTAPIO
-#'
-#' Assigns previously unseen patients to clusters learned by
-#' \code{longTAPIO_inductive}. Prediction can use either the complete
-#' trajectory or only the first few available visits.
-#'
-#' @param object Fitted object returned by \code{longTAPIO_inductive}.
-#' @param newdata Numeric matrix or data.frame containing new visits.
-#' @param user_id Patient identifier for every row of newdata.
-#' @param visits Number of first visits to use for prediction.
-#'   By default, all visits used during model fitting are required.
-#' @param ... Additional arguments, currently ignored.
-#'
-#' @return A list containing predicted clusters, cluster affinity scores,
-#'   prediction margins, and new-to-training affinity.
-#'
-#' @export
-predict.inductiveLongTAPIO <- function(
-    object,
-    newdata,
-    user_id,
-    visits = object$n_visits,
-    ...
-) {
-
-    # ==============================================================
-    # CHECK MODEL
-    # ==============================================================
-
-    if(
-        !inherits(
-            object,
-            "inductiveLongTAPIO"
-        )
-    ) {
-
-        stop(
-            "object must be an inductiveLongTAPIO model."
-        )
-    }
-
-
-    # ==============================================================
-    # CHECK VISITS
-    # ==============================================================
-
-    if(
-        length(visits) != 1 ||
-        is.na(visits) ||
-        visits < 1 ||
-        visits > object$n_visits
-    ) {
-
-        stop(
-            paste0(
-                "visits must be an integer between 1 and ",
-                object$n_visits,
-                "."
-            )
-        )
-    }
-
-
-    visits <- as.integer(
-        visits
-    )
-
-
-    # ==============================================================
-    # CHECK NEW DATA
-    # ==============================================================
-
-    newdata <- as.matrix(
-        newdata
-    )
-
-
-    if(!is.numeric(newdata)) {
-
-        stop(
-            "newdata must contain numeric features."
-        )
-    }
-
-
-    if(
-        ncol(newdata) !=
-        object$n_features_total
-    ) {
-
-        stop(
-            paste0(
-                "newdata contains ",
-                ncol(newdata),
-                " features, whereas the fitted model expects ",
-                object$n_features_total,
-                "."
-            )
-        )
-    }
-
-
-    # ==============================================================
-    # OPTIONAL FEATURE-NAME CHECK
-    # ==============================================================
-
-    if(
-        !is.null(
-            object$feature_names
-        ) &&
-        !is.null(
-            colnames(
-                newdata
-            )
-        )
-    ) {
-
-        if(
-            !identical(
-                object$feature_names,
-                colnames(
-                    newdata
-                )
-            )
-        ) {
-
-            stop(
-                paste0(
-                    "Feature names/order in newdata do not match ",
-                    "the training data."
-                )
-            )
-        }
-    }
-
-
-    # ==============================================================
-    # EXTRACT FIRST h VISITS
-    # ==============================================================
-
     prefix <- .longTAPIO_extract_prefix(
-        DATA = newdata,
+        DATA = DATA,
         user_id = user_id,
         visits = visits
     )
@@ -1358,42 +914,193 @@ predict.inductiveLongTAPIO <- function(
     )
 
 
-    # ==============================================================
-    # NEW -> TRAIN AFFINITY
-    # ==============================================================
-
-    Anew <- .longTAPIO_predict_affinity(
-        object = object,
-        DATA = prefix$DATA,
-        visits = visits
+    n_train <- length(
+        object$train_clusters
     )
 
 
-    # ==============================================================
-    # AFFINITY TO EACH FINAL TRAINING CLUSTER
-    #
-    # s_k(x*) =
-    #
-    #       1
-    #   --------- sum_i A(x*,x_i)
-    #    | C_k |   i in C_k
-    #
-    # ==============================================================
+    AFF_NEW <- matrix(
+        0,
+        n_new,
+        n_train
+    )
+
+
+    for(b in seq_len(
+        object$n_trees
+    )) {
+
+        trajectories <-
+            .longTAPIO_project_prefix(
+
+                tree =
+                    object$trees[[b]],
+
+                DATA =
+                    prefix$DATA,
+
+                n_patients =
+                    n_new,
+
+                visits =
+                    visits
+            )
+
+
+        AFF_NEW <- AFF_NEW +
+            .longTAPIO_tree_prefix_affinity(
+
+                tree =
+                    object$trees[[b]],
+
+                new_trajectories =
+                    trajectories,
+
+                visits =
+                    visits
+            )
+    }
+
+
+    AFF_NEW <- AFF_NEW /
+        (
+            object$n_trees *
+            object$levels
+        )
+
+
+    return(
+
+        list(
+
+            affinity =
+                AFF_NEW,
+
+            patients =
+                prefix$patients
+        )
+    )
+}
+
+
+# ======================================================================
+# S3 PREDICT METHOD
+# ======================================================================
+
+predict.inductiveLongTAPIO <- function(
+    object,
+    newdata,
+    user_id,
+    visits = object$n_visits,
+    ...
+) {
+
+    DATA <- as.matrix(
+        newdata
+    )
+
+
+    if(!is.numeric(DATA)) {
+        stop("newdata must contain numeric features.")
+    }
+
+
+    if(anyNA(DATA)) {
+        stop(
+            "Missing values are currently not supported."
+        )
+    }
+
+
+    if(
+        nrow(DATA) !=
+        length(user_id)
+    ) {
+
+        stop(
+            "length(user_id) must equal nrow(newdata)."
+        )
+    }
+
+
+    if(
+        ncol(DATA) !=
+        object$n_features_total
+    ) {
+
+        stop(
+            paste0(
+                "newdata contains ",
+                ncol(DATA),
+                " features; model expects ",
+                object$n_features_total,
+                "."
+            )
+        )
+    }
+
+
+    if(
+        !is.null(colnames(DATA)) &&
+        !identical(
+            colnames(DATA),
+            object$feature_names
+        )
+    ) {
+
+        stop(
+            "Feature names/order do not match training data."
+        )
+    }
+
+
+    if(
+        visits < 1 ||
+        visits > object$n_visits
+    ) {
+
+        stop(
+            paste0(
+                "visits must be between 1 and ",
+                object$n_visits,
+                "."
+            )
+        )
+    }
+
+
+    tmp <- .longTAPIO_predict_affinity(
+
+        object =
+            object,
+
+        DATA =
+            DATA,
+
+        user_id =
+            user_id,
+
+        visits =
+            visits
+    )
+
+
+    Anew <- tmp$affinity
+
+
+    n_new <- nrow(
+        Anew
+    )
+
+
+    # ==================================================================
+    # AFFINITY TO FINAL REFERENCE CLUSTERS
+    # ==================================================================
 
     cluster_scores <- matrix(
         NA_real_,
-        nrow = n_new,
-        ncol = object$k
-    )
-
-
-    colnames(
-        cluster_scores
-    ) <- paste0(
-        "cluster_",
-        seq_len(
-            object$k
-        )
+        n_new,
+        object$k
     )
 
 
@@ -1407,71 +1114,39 @@ predict.inductiveLongTAPIO <- function(
         )
 
 
-        if(length(members) == 0) {
-
-            cluster_scores[
+        cluster_scores[
+            ,
+            k_id
+        ] <- rowMeans(
+            Anew[
                 ,
-                k_id
-            ] <- NA_real_
-
-        } else {
-
-            cluster_scores[
-                ,
-                k_id
-            ] <- rowMeans(
-                Anew[
-                    ,
-                    members,
-                    drop = FALSE
-                ]
-            )
-        }
+                members,
+                drop = FALSE
+            ]
+        )
     }
 
 
-    # ==============================================================
-    # FINAL CLUSTER ASSIGNMENT
-    # ==============================================================
+    # ==================================================================
+    # ASSIGNMENT
+    # ==================================================================
 
-    predicted_cluster <- max.col(
+    predicted <- max.col(
         cluster_scores,
         ties.method = "first"
     )
 
 
-    names(
-        predicted_cluster
-    ) <- as.character(
-        prefix$patients
-    )
-
-
-    rownames(
-        cluster_scores
-    ) <- as.character(
-        prefix$patients
-    )
-
-
-    rownames(
-        Anew
-    ) <- as.character(
-        prefix$patients
-    )
-
-
-    # ==============================================================
-    # PREDICTION MARGIN
-    #
-    # best cluster score - second best cluster score
-    #
-    # This is NOT a calibrated probability.
-    # ==============================================================
+    # ==================================================================
+    # ASSIGNMENT MARGIN
+    # ==================================================================
 
     margin <- apply(
+
         cluster_scores,
+
         1,
+
         function(x) {
 
             sx <- sort(
@@ -1493,178 +1168,31 @@ predict.inductiveLongTAPIO <- function(
     )
 
 
-    # ==============================================================
-    # RETURN
-    # ==============================================================
-
-    result <- list(
-
-        cluster =
-            predicted_cluster,
-
-        scores =
-            cluster_scores,
-
-        margin =
-            margin,
-
-        affinity =
-            Anew,
-
-        patients =
-            prefix$patients,
-
-        visits =
-            visits
-    )
-
-
-    class(
-        result
-    ) <- "predict.inductiveLongTAPIO"
-
-
     return(
-        result
-    )
-}
 
+        list(
 
-# ======================================================================
-# PRINT FITTED MODEL
-# ======================================================================
+            cluster =
+                predicted,
 
-#' @export
-print.inductiveLongTAPIO <- function(
-    x,
-    ...
-) {
+            cluster_scores =
+                cluster_scores,
 
-    cat(
-        "Inductive longitudinal TAPIO\n"
-    )
+            margin =
+                margin,
 
-    cat(
-        "----------------------------\n"
-    )
+            # compatibility alias
+            confidence =
+                margin,
 
-    cat(
-        "Training patients :",
-        length(
-            x$train_patients
-        ),
-        "\n"
-    )
+            affinity =
+                Anew,
 
-    cat(
-        "Visits/patient    :",
-        x$n_visits,
-        "\n"
-    )
+            patients =
+                tmp$patients,
 
-    cat(
-        "Features          :",
-        x$n_features_total,
-        "\n"
-    )
-
-    cat(
-        "Features/tree     :",
-        x$n_features,
-        "\n"
-    )
-
-    cat(
-        "Trees             :",
-        x$n_trees,
-        "\n"
-    )
-
-    cat(
-        "Hierarchy levels  :",
-        x$levels,
-        "\n"
-    )
-
-    cat(
-        "Final clusters    :",
-        x$k,
-        "\n"
-    )
-
-    cat(
-        "PCA selection     : random weighted\n"
-    )
-
-    cat(
-        "Clustering method :",
-        x$method,
-        "\n"
-    )
-
-    invisible(
-        x
-    )
-}
-
-
-# ======================================================================
-# PRINT PREDICTION
-# ======================================================================
-
-#' @export
-print.predict.inductiveLongTAPIO <- function(
-    x,
-    ...
-) {
-
-    cat(
-        "Inductive longTAPIO prediction\n"
-    )
-
-    cat(
-        "--------------------------------\n"
-    )
-
-    cat(
-        "Patients          :",
-        length(
-            x$cluster
-        ),
-        "\n"
-    )
-
-    cat(
-        "Observed visits   :",
-        x$visits,
-        "\n\n"
-    )
-
-
-    result <- data.frame(
-
-        patient =
-            x$patients,
-
-        cluster =
-            as.integer(
-                x$cluster
-            ),
-
-        margin =
-            as.numeric(
-                x$margin
-            )
-    )
-
-
-    print(
-        result,
-        row.names = FALSE
-    )
-
-
-    invisible(
-        x
+            visits =
+                visits
+        )
     )
 }

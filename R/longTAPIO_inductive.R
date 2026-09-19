@@ -1,5 +1,17 @@
 # ======================================================================
 # INDUCTIVE / PROGRESSIVE longTAPIO
+#
+# PCA selection:
+#
+#   pca_selection = "first"
+#       -> always use PC1
+#
+#   pca_selection = "random_weighted"
+#       -> randomly select PC according to explained variance
+#
+# DEFAULT:
+#   pca_selection = "first"
+#
 # ======================================================================
 
 
@@ -223,18 +235,35 @@ longTAPIO_inductive <- function(
     levels = 4,
     method = "ward.D2",
     scale = TRUE,
-    replace = TRUE
+    replace = TRUE,
+    pca_selection = c(
+        "first",
+        "random_weighted"
+    )
 ) {
+
+    # ==================================================================
+    # PCA SELECTION
+    # ==================================================================
+
+    pca_selection <- match.arg(
+        pca_selection
+    )
+
 
     DATA <- as.matrix(DATA)
 
 
     if(!is.numeric(DATA)) {
-        stop("DATA must contain numeric features.")
+
+        stop(
+            "DATA must contain numeric features."
+        )
     }
 
 
     if(anyNA(DATA)) {
+
         stop(
             "Missing values are currently not supported."
         )
@@ -276,8 +305,10 @@ longTAPIO_inductive <- function(
     if(!replace && n_features > p) {
 
         stop(
-            "n_features cannot exceed the number of features ",
-            "when replace = FALSE."
+            paste0(
+                "n_features cannot exceed the number of features ",
+                "when replace = FALSE."
+            )
         )
     }
 
@@ -360,16 +391,40 @@ longTAPIO_inductive <- function(
             pca$sdev^2
 
 
-        prob <-
-            eigenvalues /
-            sum(eigenvalues)
+        # ==============================================================
+        # SELECT PRINCIPAL COMPONENT
+        #
+        # first:
+        #   deterministic PC1
+        #
+        # random_weighted:
+        #   random PC with probability proportional to explained
+        #   variance
+        # ==============================================================
+
+        if(
+            pca_selection == "first"
+        ) {
+
+            selected_pc <- 1L
+
+        } else {
+
+            prob <-
+                eigenvalues /
+                sum(
+                    eigenvalues
+                )
 
 
-        selected_pc <- sample(
-            seq_along(prob),
-            size = 1,
-            prob = prob
-        )
+            selected_pc <- sample(
+                seq_along(
+                    prob
+                ),
+                size = 1,
+                prob = prob
+            )
+        }
 
 
         scores <- drop(
@@ -405,7 +460,9 @@ longTAPIO_inductive <- function(
 
 
         if(
-            is.finite(contribution_sum) &&
+            is.finite(
+                contribution_sum
+            ) &&
             contribution_sum > 0
         ) {
 
@@ -419,12 +476,17 @@ longTAPIO_inductive <- function(
         }
 
 
+        # --------------------------------------------------------------
         # Original feature IDs.
         #
         # Duplicates are intentional when replace = TRUE.
+        # --------------------------------------------------------------
 
-        names(feature_contribution) <-
-            as.character(ids)
+        names(
+            feature_contribution
+        ) <- as.character(
+            ids
+        )
 
 
         # ==============================================================
@@ -439,10 +501,11 @@ longTAPIO_inductive <- function(
         )
 
 
-        rownames(trajectories) <-
-            as.character(
-                patients
-            )
+        rownames(
+            trajectories
+        ) <- as.character(
+            patients
+        )
 
 
         # ==============================================================
@@ -450,7 +513,9 @@ longTAPIO_inductive <- function(
         # ==============================================================
 
         hc <- fastcluster::hclust(
-            dist(trajectories),
+            dist(
+                trajectories
+            ),
             method = method
         )
 
@@ -486,7 +551,9 @@ longTAPIO_inductive <- function(
 
 
             cluster_ids <- sort(
-                unique(cl)
+                unique(
+                    cl
+                )
             )
 
 
@@ -499,10 +566,11 @@ longTAPIO_inductive <- function(
             )
 
 
-            rownames(centroids) <-
-                as.character(
-                    cluster_ids
-                )
+            rownames(
+                centroids
+            ) <- as.character(
+                cluster_ids
+            )
 
 
             for(cc in seq_along(
@@ -598,7 +666,9 @@ longTAPIO_inductive <- function(
 
     DIST <- 1 - AFF
 
-    diag(DIST) <- 0
+    diag(
+        DIST
+    ) <- 0
 
 
     # ==================================================================
@@ -606,7 +676,9 @@ longTAPIO_inductive <- function(
     # ==================================================================
 
     final_hclust <- fastcluster::hclust(
-        as.dist(DIST),
+        as.dist(
+            DIST
+        ),
         method = method
     )
 
@@ -617,10 +689,11 @@ longTAPIO_inductive <- function(
     )
 
 
-    names(final_clusters) <-
-        as.character(
-            patients
-        )
+    names(
+        final_clusters
+    ) <- as.character(
+        patients
+    )
 
 
     # ==================================================================
@@ -687,15 +760,18 @@ longTAPIO_inductive <- function(
             replace,
 
         pca_selection =
-            "random_weighted"
+            pca_selection
     )
 
 
-    class(model) <-
-        "inductiveLongTAPIO"
+    class(
+        model
+    ) <- "inductiveLongTAPIO"
 
 
-    return(model)
+    return(
+        model
+    )
 }
 
 
@@ -710,7 +786,9 @@ longTAPIO_inductive <- function(
     visits
 ) {
 
-    DATA <- as.matrix(DATA)
+    DATA <- as.matrix(
+        DATA
+    )
 
 
     Xs <- DATA[
@@ -829,14 +907,18 @@ longTAPIO_inductive <- function(
 
         centroids <- full_centroids[
             ,
-            seq_len(visits),
+            seq_len(
+                visits
+            ),
             drop = FALSE
         ]
 
 
         cluster_ids <-
             as.integer(
-                rownames(centroids)
+                rownames(
+                    centroids
+                )
             )
 
 
@@ -878,7 +960,11 @@ longTAPIO_inductive <- function(
                 ]
 
 
-            A[i, ] <- A[i, ] +
+            A[
+                i,
+            ] <- A[
+                i,
+            ] +
                 as.numeric(
                     train_cl ==
                     new_cl
@@ -887,7 +973,9 @@ longTAPIO_inductive <- function(
     }
 
 
-    return(A)
+    return(
+        A
+    )
 }
 
 
@@ -1001,11 +1089,15 @@ predict.inductiveLongTAPIO <- function(
 
 
     if(!is.numeric(DATA)) {
-        stop("newdata must contain numeric features.")
+
+        stop(
+            "newdata must contain numeric features."
+        )
     }
 
 
     if(anyNA(DATA)) {
+
         stop(
             "Missing values are currently not supported."
         )
@@ -1014,7 +1106,9 @@ predict.inductiveLongTAPIO <- function(
 
     if(
         nrow(DATA) !=
-        length(user_id)
+        length(
+            user_id
+        )
     ) {
 
         stop(
@@ -1041,9 +1135,15 @@ predict.inductiveLongTAPIO <- function(
 
 
     if(
-        !is.null(colnames(DATA)) &&
+        !is.null(
+            colnames(
+                DATA
+            )
+        ) &&
         !identical(
-            colnames(DATA),
+            colnames(
+                DATA
+            ),
             object$feature_names
         )
     ) {
@@ -1181,7 +1281,8 @@ predict.inductiveLongTAPIO <- function(
             margin =
                 margin,
 
-            # compatibility alias
+            # Compatibility alias.
+            # Note: this is an assignment margin, not a probability.
             confidence =
                 margin,
 

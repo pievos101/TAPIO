@@ -1,7 +1,27 @@
 # ======================================================================
-# ONE-RUN INDUCTIVE longTAPIO BENCHMARK
+# BENCHMARK:
 #
-# Progressive clustering + progressive feature importance
+# ORIGINAL TRANSDUCTIVE longTAPIO
+#        vs
+# INDUCTIVE / PROGRESSIVE longTAPIO
+#
+# PCA STRATEGY:
+#   FIRST PRINCIPAL COMPONENT (PC1) FOR EVERY TREE
+#
+# Includes:
+#
+#   1. Original transductive longTAPIO clustering
+#   2. Original transductive feature importance
+#   3. Inductive longTAPIO fitted on training patients only
+#   4. Progressive prediction of unseen test patients
+#   5. Inductive global feature importance
+#   6. Progressive cluster-specific feature importance
+#   7. Patient-specific progressive feature importance
+#   8. Hungarian cluster alignment
+#   9. Comparison of transductive vs inductive importance
+#  10. Importance-profile correlations
+#  11. Assignment stability
+#
 # ======================================================================
 
 
@@ -16,13 +36,11 @@ library(aricode)
 library(reshape)
 library(fastcluster)
 library(ggplot2)
+library(clue)
 
 
 # ======================================================================
-# IMPORTANT
-#
-# If these functions are not yet part of the installed TAPIO package,
-# source them here.
+# OPTIONAL SOURCE FILES
 # ======================================================================
 
 # source("R/TAPIO_inductive.R")
@@ -37,7 +55,7 @@ library(ggplot2)
 
 TRAIN_FRAC <- 0.70
 
-N_VISITS <- 10
+N_VISITS <- 5
 
 SET_K <- 4
 
@@ -53,6 +71,15 @@ SCALE_PCA <- TRUE
 
 REPLACE_FEATURES <- TRUE
 
+
+# ======================================================================
+# IMPORTANT:
+# USE FIRST PRINCIPAL COMPONENT
+# ======================================================================
+
+PCA_SELECTION <- "first"
+
+
 HORIZONS <- seq_len(
     N_VISITS
 )
@@ -67,7 +94,7 @@ set.seed(
 
 cat("\n")
 cat("======================================================================\n")
-cat("longTAPIO INDUCTIVE / PROGRESSIVE IMPORTANCE BENCHMARK\n")
+cat("TRANSDUCTIVE vs INDUCTIVE longTAPIO BENCHMARK\n")
 cat("======================================================================\n")
 cat("Runs            : 1\n")
 cat("Train fraction  :", TRAIN_FRAC, "\n")
@@ -76,8 +103,179 @@ cat("Clusters        :", SET_K, "\n")
 cat("Trees           :", SET_N_TREES, "\n")
 cat("Features/tree   :", SET_N_FEATURES, "\n")
 cat("Levels          :", SET_LEVELS, "\n")
-cat("PCA selection   : random_weighted\n")
+cat("PCA selection   :", PCA_SELECTION, "\n")
 cat("======================================================================\n\n")
+
+
+# ======================================================================
+# HELPER:
+# HUNGARIAN CLUSTER ALIGNMENT
+# ======================================================================
+
+align_clusters <- function(
+    reference,
+    estimated
+) {
+
+    reference <- as.integer(
+        as.factor(
+            reference
+        )
+    )
+
+    estimated <- as.integer(
+        as.factor(
+            estimated
+        )
+    )
+
+
+    TAB <- table(
+        estimated,
+        reference
+    )
+
+
+    nr <- nrow(
+        TAB
+    )
+
+    nc <- ncol(
+        TAB
+    )
+
+    nn <- max(
+        nr,
+        nc
+    )
+
+
+    SIMILARITY <- matrix(
+        0,
+        nrow = nn,
+        ncol = nn
+    )
+
+
+    SIMILARITY[
+        seq_len(nr),
+        seq_len(nc)
+    ] <- TAB
+
+
+    ASSIGN <- solve_LSAP(
+        SIMILARITY,
+        maximum = TRUE
+    )
+
+
+    MAP <- as.integer(
+        ASSIGN[
+            seq_len(nr)
+        ]
+    )
+
+
+    aligned <- rep(
+        NA_integer_,
+        length(
+            estimated
+        )
+    )
+
+
+    for(i in seq_len(
+        nr
+    )) {
+
+        aligned[
+            estimated == i
+        ] <- MAP[i]
+    }
+
+
+    return(
+        list(
+
+            aligned =
+                aligned,
+
+            mapping =
+                MAP,
+
+            contingency =
+                TAB
+        )
+    )
+}
+
+
+# ======================================================================
+# HELPER:
+# ALIGN IMPORTANCE MATRIX
+# ======================================================================
+
+align_importance <- function(
+    importance_matrix,
+    mapping,
+    K
+) {
+
+    OUT <- matrix(
+        NA_real_,
+        nrow = K,
+        ncol = ncol(
+            importance_matrix
+        )
+    )
+
+
+    colnames(
+        OUT
+    ) <- colnames(
+        importance_matrix
+    )
+
+
+    for(i in seq_along(
+        mapping
+    )) {
+
+        target <-
+            mapping[i]
+
+
+        if(
+            target >= 1 &&
+            target <= K &&
+            i <= nrow(
+                importance_matrix
+            )
+        ) {
+
+            OUT[
+                target,
+            ] <- importance_matrix[
+                i,
+            ]
+        }
+    }
+
+
+    rownames(
+        OUT
+    ) <- paste0(
+        "Cluster ",
+        seq_len(
+            K
+        )
+    )
+
+
+    return(
+        OUT
+    )
+}
 
 
 # ======================================================================
@@ -99,10 +297,12 @@ id <- sample(
 )
 
 
-#r_sigma_diag[id] <- sample(
-#    3:20,
-#    1
-#)
+# Optional:
+#
+# r_sigma_diag[id] <- sample(
+#     3:20,
+#     1
+# )
 
 
 cat(
@@ -116,7 +316,7 @@ cat(
 
 
 cat(
-    "Outcome with modified variance:",
+    "Outcome selected:",
     id,
     "\n\n"
 )
@@ -165,7 +365,7 @@ Longdat2_wide <- reshape(
 
 
 # ======================================================================
-# SUBJECT + TIME ORDER
+# SORT SUBJECT + TIME
 # ======================================================================
 
 Longdat2_wide <-
@@ -204,7 +404,9 @@ USER_ID <-
 cat(
     "Features:",
     paste(
-        colnames(DD),
+        colnames(
+            DD
+        ),
         collapse = ", "
     ),
     "\n"
@@ -220,6 +422,7 @@ subject_info <- aggregate(
     Longdat2_wide$cluster,
 
     by = list(
+
         subject =
             Longdat2_wide$subject
     ),
@@ -250,6 +453,10 @@ ALL_SUBJECTS <-
     subject_info$subject
 
 
+TRUE_ALL <-
+    subject_info$cluster
+
+
 n_subjects <-
     length(
         ALL_SUBJECTS
@@ -259,17 +466,262 @@ n_subjects <-
 cat(
     "Number of subjects:",
     n_subjects,
-    "\n"
+    "\n\n"
 )
 
 
 # ======================================================================
-# TRAIN / TEST SPLIT
 # ======================================================================
+#
+# PART I
+#
+# ORIGINAL TRANSDUCTIVE longTAPIO
+#
+# PC1 ONLY
+#
+# ======================================================================
+# ======================================================================
+
+
+cat("\n")
+cat("======================================================================\n")
+cat("ORIGINAL TRANSDUCTIVE longTAPIO - PC1\n")
+cat("======================================================================\n")
+
+
+set.seed(
+    200001
+)
+
+
+TRANSDUCTIVE <- longTAPIO_trajectories(
+
+    DATA =
+        DD,
+
+    user_id =
+        USER_ID,
+
+    k =
+        SET_K,
+
+    n_features =
+        SET_N_FEATURES,
+
+    n_trees =
+        SET_N_TREES,
+
+    do.pca =
+        TRUE,
+
+    do.MFA =
+        FALSE,
+
+    do.leveling =
+        TRUE,
+
+    levels =
+        SET_LEVELS,
+
+    verbose =
+        FALSE,
+
+    method =
+        METHOD,
+
+    scale =
+        SCALE_PCA,
+
+    replace =
+        REPLACE_FEATURES,
+
+    pca_selection =
+        "first"
+)
+
+
+# ======================================================================
+# TRANSDUCTIVE PERFORMANCE
+# ======================================================================
+
+ARI_TRANSDUCTIVE <- ARI(
+
+    TRUE_ALL,
+
+    TRANSDUCTIVE$cl
+)
+
+
+NMI_TRANSDUCTIVE <- NMI(
+
+    TRUE_ALL,
+
+    TRANSDUCTIVE$cl
+)
+
+
+cat(
+    sprintf(
+        "Transductive ARI : %.3f\n",
+        ARI_TRANSDUCTIVE
+    )
+)
+
+
+cat(
+    sprintf(
+        "Transductive NMI : %.3f\n",
+        NMI_TRANSDUCTIVE
+    )
+)
+
+
+# ======================================================================
+# ALIGN TRANSDUCTIVE CLUSTERS
+# ======================================================================
+
+ALIGN_TRANS <- align_clusters(
+
+    TRUE_ALL,
+
+    TRANSDUCTIVE$cl
+)
+
+
+TRANS_CLUSTER_ALIGNED <-
+    ALIGN_TRANS$aligned
+
+
+cat(
+    "\nTransductive cluster mapping:\n"
+)
+
+
+print(
+
+    data.frame(
+
+        Estimated =
+            seq_along(
+                ALIGN_TRANS$mapping
+            ),
+
+        True =
+            ALIGN_TRANS$mapping
+    )
+)
+
+
+cat(
+    "\nTransductive contingency table:\n"
+)
+
+
+print(
+    ALIGN_TRANS$contingency
+)
+
+
+# ======================================================================
+# ORIGINAL TRANSDUCTIVE FEATURE IMPORTANCE
+# ======================================================================
+
+cat("\n")
+cat(
+    "Calculating original transductive feature importance...\n"
+)
+
+
+IMP_TRANSDUCTIVE <- importance(
+    TRANSDUCTIVE
+)
+
+
+colnames(
+    IMP_TRANSDUCTIVE
+) <- colnames(
+    DD
+)
+
+
+rownames(
+    IMP_TRANSDUCTIVE
+) <- paste0(
+
+    "Estimated cluster ",
+
+    seq_len(
+        nrow(
+            IMP_TRANSDUCTIVE
+        )
+    )
+)
+
+
+cat(
+    "\nOriginal transductive importance:\n"
+)
+
+
+print(
+
+    round(
+        IMP_TRANSDUCTIVE,
+        3
+    )
+)
+
+
+# ======================================================================
+# ALIGN TRANSDUCTIVE IMPORTANCE
+# ======================================================================
+
+IMP_TRANSDUCTIVE_ALIGNED <- align_importance(
+
+    importance_matrix =
+        IMP_TRANSDUCTIVE,
+
+    mapping =
+        ALIGN_TRANS$mapping,
+
+    K =
+        SET_K
+)
+
+
+cat(
+    "\nAligned transductive importance:\n"
+)
+
+
+print(
+
+    round(
+        IMP_TRANSDUCTIVE_ALIGNED,
+        3
+    )
+)
+
+
+# ======================================================================
+# ======================================================================
+#
+# PART II
+#
+# TRAIN / TEST SPLIT
+#
+# ======================================================================
+# ======================================================================
+
 
 n_train <- floor(
     TRAIN_FRAC *
     n_subjects
+)
+
+
+set.seed(
+    SEED + 1
 )
 
 
@@ -291,27 +743,45 @@ TEST_SUBJECTS <- sort(
 )
 
 
+cat("\n")
+cat("======================================================================\n")
+cat("INDUCTIVE TRAIN / TEST SPLIT\n")
+cat("======================================================================\n")
+
+
 cat(
     "Training subjects:",
-    length(TRAIN_SUBJECTS),
+    length(
+        TRAIN_SUBJECTS
+    ),
     "\n"
 )
 
 
 cat(
     "Test subjects    :",
-    length(TEST_SUBJECTS),
+    length(
+        TEST_SUBJECTS
+    ),
     "\n\n"
 )
 
 
 # ======================================================================
-# TRUE TEST LABELS
+# TRUE TRAIN / TEST LABELS
 # ======================================================================
+
+true_train <-
+    subject_info$cluster[
+        match(
+            TRAIN_SUBJECTS,
+            subject_info$subject
+        )
+    ]
+
 
 true_test <-
     subject_info$cluster[
-
         match(
             TEST_SUBJECTS,
             subject_info$subject
@@ -342,7 +812,9 @@ USER_train_original <-
 
 
 USER_train <- match(
+
     USER_train_original,
+
     TRAIN_SUBJECTS
 )
 
@@ -370,18 +842,29 @@ USER_test_original <-
 
 
 USER_test <- match(
+
     USER_test_original,
+
     TEST_SUBJECTS
 )
 
 
 # ======================================================================
-# FIT INDUCTIVE longTAPIO
 # ======================================================================
+#
+# PART III
+#
+# FIT INDUCTIVE longTAPIO
+#
+# PC1 ONLY
+#
+# ======================================================================
+# ======================================================================
+
 
 cat("\n")
 cat("======================================================================\n")
-cat("FITTING INDUCTIVE longTAPIO\n")
+cat("FITTING INDUCTIVE longTAPIO - PC1\n")
 cat("======================================================================\n")
 
 
@@ -417,7 +900,10 @@ model <- longTAPIO_inductive(
         SCALE_PCA,
 
     replace =
-        REPLACE_FEATURES
+        REPLACE_FEATURES,
+
+    pca_selection =
+        "first"
 )
 
 
@@ -445,7 +931,31 @@ cat(
 
 
 cat(
-    "Example feature contribution from tree 1:\n"
+    "Selected PC in first 10 trees:\n"
+)
+
+
+print(
+    sapply(
+        model$trees[
+            seq_len(
+                min(
+                    10,
+                    length(
+                        model$trees
+                    )
+                )
+            )
+        ],
+        function(x) {
+            x$selected_pc
+        }
+    )
+)
+
+
+cat(
+    "\nExample feature contribution from tree 1:\n"
 )
 
 
@@ -464,12 +974,96 @@ cat(
 
 
 # ======================================================================
-# PROGRESSIVE PREDICTION
+# SAFETY CHECK:
+# ALL TREES MUST USE PC1
 # ======================================================================
+
+SELECTED_PCS <- sapply(
+
+    model$trees,
+
+    function(x) {
+        x$selected_pc
+    }
+)
+
+
+if(
+    any(
+        SELECTED_PCS != 1
+    )
+) {
+
+    stop(
+        paste0(
+            "ERROR: inductive model is not using PC1 in every tree. ",
+            "Modify longTAPIO_inductive() as shown below."
+        )
+    )
+}
+
+
+cat(
+    "\nVerified: all inductive trees use PC1.\n"
+)
+
+
+# ======================================================================
+# ALIGN INDUCTIVE REFERENCE CLUSTERS
+# ======================================================================
+
+ALIGN_IND <- align_clusters(
+
+    true_train,
+
+    model$train_clusters
+)
+
+
+cat(
+    "\nInductive reference-cluster mapping:\n"
+)
+
+
+print(
+
+    data.frame(
+
+        Estimated =
+            seq_along(
+                ALIGN_IND$mapping
+            ),
+
+        True =
+            ALIGN_IND$mapping
+    )
+)
+
+
+cat(
+    "\nInductive training contingency table:\n"
+)
+
+
+print(
+    ALIGN_IND$contingency
+)
+
+
+# ======================================================================
+# ======================================================================
+#
+# PART IV
+#
+# PROGRESSIVE PREDICTION
+#
+# ======================================================================
+# ======================================================================
+
 
 cat("\n")
 cat("======================================================================\n")
-cat("PROGRESSIVE PREDICTION\n")
+cat("PROGRESSIVE PREDICTION OF UNSEEN PATIENTS\n")
 cat("======================================================================\n")
 
 
@@ -491,6 +1085,12 @@ MARGIN_PREFIX <- rep(
 )
 
 
+PREDICTIONS <- vector(
+    "list",
+    N_VISITS
+)
+
+
 for(H in HORIZONS) {
 
     pred <- predict(
@@ -508,21 +1108,32 @@ for(H in HORIZONS) {
     )
 
 
+    PREDICTIONS[[H]] <-
+        pred
+
+
     ARI_PREFIX[H] <- ARI(
+
         true_test,
+
         pred$cluster
     )
 
 
     NMI_PREFIX[H] <- NMI(
+
         true_test,
+
         pred$cluster
     )
 
 
     MARGIN_PREFIX[H] <- mean(
+
         pred$margin,
-        na.rm = TRUE
+
+        na.rm =
+            TRUE
     )
 
 
@@ -567,6 +1178,7 @@ PERFORMANCE <- data.frame(
 
 cat("\n")
 
+
 print(
     PERFORMANCE,
     digits = 3,
@@ -575,12 +1187,116 @@ print(
 
 
 # ======================================================================
-# FEATURE IMPORTANCE
+# PERFORMANCE COMPARISON
 # ======================================================================
+
+COMPARISON <- data.frame(
+
+    Method = c(
+
+        "Original longTAPIO (transductive, PC1)",
+
+        paste0(
+            "Inductive longTAPIO PC1 (visit ",
+            HORIZONS,
+            ")"
+        )
+    ),
+
+    Visits = c(
+
+        N_VISITS,
+
+        HORIZONS
+    ),
+
+    ARI = c(
+
+        ARI_TRANSDUCTIVE,
+
+        ARI_PREFIX
+    ),
+
+    NMI = c(
+
+        NMI_TRANSDUCTIVE,
+
+        NMI_PREFIX
+    )
+)
+
 
 cat("\n")
 cat("======================================================================\n")
-cat("CALCULATING PROGRESSIVE FEATURE IMPORTANCE\n")
+cat("TRANSDUCTIVE vs INDUCTIVE PERFORMANCE\n")
+cat("======================================================================\n")
+
+
+print(
+    COMPARISON,
+    digits = 3,
+    row.names = FALSE
+)
+
+
+# ======================================================================
+# INDUCTIVE GAP
+# ======================================================================
+
+INDUCTIVE_GAP_ARI <-
+
+    ARI_PREFIX[
+        N_VISITS
+    ] -
+
+    ARI_TRANSDUCTIVE
+
+
+INDUCTIVE_GAP_NMI <-
+
+    NMI_PREFIX[
+        N_VISITS
+    ] -
+
+    NMI_TRANSDUCTIVE
+
+
+cat(
+
+    sprintf(
+
+        "\nFull-trajectory inductive - transductive ARI : %+.3f\n",
+
+        INDUCTIVE_GAP_ARI
+    )
+)
+
+
+cat(
+
+    sprintf(
+
+        "Full-trajectory inductive - transductive NMI : %+.3f\n",
+
+        INDUCTIVE_GAP_NMI
+    )
+)
+
+
+# ======================================================================
+# ======================================================================
+#
+# PART V
+#
+# INDUCTIVE FEATURE IMPORTANCE
+#
+# ======================================================================
+# ======================================================================
+
+
+cat("\n")
+cat("======================================================================\n")
+cat("CALCULATING INDUCTIVE / PROGRESSIVE FEATURE IMPORTANCE\n")
 cat("======================================================================\n")
 
 
@@ -606,28 +1322,160 @@ cat(
 
 
 # ======================================================================
-# GLOBAL IMPORTANCE
+# ALIGN GLOBAL INDUCTIVE IMPORTANCE
 # ======================================================================
 
-cat("\n")
-cat("======================================================================\n")
-cat("GLOBAL CLUSTER-SPECIFIC IMPORTANCE\n")
-cat("======================================================================\n")
+IMP_INDUCTIVE_ALIGNED <- align_importance(
+
+    importance_matrix =
+        IMP$global,
+
+    mapping =
+        ALIGN_IND$mapping,
+
+    K =
+        SET_K
+)
+
+
+colnames(
+    IMP_INDUCTIVE_ALIGNED
+) <- colnames(
+    DD
+)
+
+
+cat(
+    "\nAligned inductive global importance:\n"
+)
 
 
 print(
+
     round(
-        IMP$global,
+        IMP_INDUCTIVE_ALIGNED,
         3
     )
 )
 
 
 # ======================================================================
-# GLOBAL IMPORTANCE DATA FRAME
+# ======================================================================
+#
+# PART VI
+#
+# TRANSDUCTIVE vs INDUCTIVE IMPORTANCE
+#
+# ======================================================================
 # ======================================================================
 
-GLOBAL_DF <- data.frame()
+
+cat("\n")
+cat("======================================================================\n")
+cat("TRANSDUCTIVE vs INDUCTIVE FEATURE IMPORTANCE\n")
+cat("======================================================================\n")
+
+
+IMPORTANCE_CORRELATION <- data.frame(
+
+    Cluster =
+        seq_len(
+            SET_K
+        ),
+
+    Pearson =
+        NA_real_,
+
+    Spearman =
+        NA_real_
+)
+
+
+for(k_id in seq_len(
+    SET_K
+)) {
+
+    x <-
+        IMP_TRANSDUCTIVE_ALIGNED[
+            k_id,
+        ]
+
+
+    y <-
+        IMP_INDUCTIVE_ALIGNED[
+            k_id,
+        ]
+
+
+    ok <-
+        is.finite(x) &
+        is.finite(y)
+
+
+    if(
+        sum(ok) >= 2
+    ) {
+
+        IMPORTANCE_CORRELATION$Pearson[
+            k_id
+        ] <- cor(
+
+            x[ok],
+
+            y[ok],
+
+            method =
+                "pearson"
+        )
+
+
+        IMPORTANCE_CORRELATION$Spearman[
+            k_id
+        ] <- cor(
+
+            x[ok],
+
+            y[ok],
+
+            method =
+                "spearman"
+        )
+    }
+}
+
+
+cat(
+    "\nImportance-profile correlations:\n"
+)
+
+
+print(
+    IMPORTANCE_CORRELATION,
+    digits = 3,
+    row.names = FALSE
+)
+
+
+cat(
+
+    sprintf(
+
+        "\nMean Spearman correlation: %.3f\n",
+
+        mean(
+            IMPORTANCE_CORRELATION$Spearman,
+            na.rm = TRUE
+        )
+    )
+)
+
+
+# ======================================================================
+# LONG FORMAT:
+# IMPORTANCE COMPARISON
+# ======================================================================
+
+IMPORTANCE_COMPARISON <- data.frame()
 
 
 for(k_id in seq_len(
@@ -638,11 +1486,14 @@ for(k_id in seq_len(
         ncol(DD)
     )) {
 
-        GLOBAL_DF <- rbind(
+        IMPORTANCE_COMPARISON <- rbind(
 
-            GLOBAL_DF,
+            IMPORTANCE_COMPARISON,
 
             data.frame(
+
+                Method =
+                    "Transductive",
 
                 Cluster =
                     paste0(
@@ -651,10 +1502,35 @@ for(k_id in seq_len(
                     ),
 
                 Feature =
-                    colnames(DD)[j],
+                    colnames(
+                        DD
+                    )[j],
 
                 Importance =
-                    IMP$global[
+                    IMP_TRANSDUCTIVE_ALIGNED[
+                        k_id,
+                        j
+                    ]
+            ),
+
+            data.frame(
+
+                Method =
+                    "Inductive",
+
+                Cluster =
+                    paste0(
+                        "Cluster ",
+                        k_id
+                    ),
+
+                Feature =
+                    colnames(
+                        DD
+                    )[j],
+
+                Importance =
+                    IMP_INDUCTIVE_ALIGNED[
                         k_id,
                         j
                     ]
@@ -666,12 +1542,12 @@ for(k_id in seq_len(
 
 # ======================================================================
 # FIGURE 1:
-# GLOBAL IMPORTANCE HEATMAP
+# TRANSDUCTIVE vs INDUCTIVE IMPORTANCE
 # ======================================================================
 
-p_global <- ggplot(
+p_importance_comparison <- ggplot(
 
-    GLOBAL_DF,
+    IMPORTANCE_COMPARISON,
 
     aes(
         x = Feature,
@@ -692,7 +1568,12 @@ p_global <- ggplot(
                 )
         ),
 
-        size = 4
+        size = 3.8
+    ) +
+
+    facet_wrap(
+        ~ Method,
+        ncol = 1
     ) +
 
     scale_fill_gradient(
@@ -704,13 +1585,19 @@ p_global <- ggplot(
             "steelblue",
 
         limits =
-            c(0, 1)
+            c(
+                0,
+                1
+            )
     ) +
 
     labs(
 
         title =
-            "Global cluster-specific feature importance",
+            "Feature importance: transductive vs inductive longTAPIO",
+
+        subtitle =
+            "PC1 used in every tree; clusters aligned to simulation classes",
 
         x =
             "Feature",
@@ -725,13 +1612,72 @@ p_global <- ggplot(
 
 
 print(
-    p_global
+    p_importance_comparison
 )
 
 
 # ======================================================================
-# PROGRESSIVE IMPORTANCE DATA FRAME
 # ======================================================================
+#
+# PART VII
+#
+# PROGRESSIVE CLUSTER-SPECIFIC IMPORTANCE
+#
+# ======================================================================
+# ======================================================================
+
+
+PROGRESSIVE_ALIGNED <- array(
+
+    NA_real_,
+
+    dim = c(
+        SET_K,
+        ncol(DD),
+        N_VISITS
+    ),
+
+    dimnames = list(
+
+        paste0(
+            "Cluster ",
+            seq_len(
+                SET_K
+            )
+        ),
+
+        colnames(
+            DD
+        ),
+
+        paste0(
+            "Visit ",
+            HORIZONS
+        )
+    )
+)
+
+
+for(old_cluster in seq_len(
+    SET_K
+)) {
+
+    new_cluster <-
+        ALIGN_IND$mapping[
+            old_cluster
+        ]
+
+
+    PROGRESSIVE_ALIGNED[
+        new_cluster,
+        ,
+    ] <-
+        IMP$cluster_progressive[
+            old_cluster,
+            ,
+        ]
+}
+
 
 PROGRESSIVE_DF <- data.frame()
 
@@ -759,13 +1705,15 @@ for(k_id in seq_len(
                         ),
 
                     Feature =
-                        colnames(DD)[j],
+                        colnames(
+                            DD
+                        )[j],
 
                     Visit =
                         H,
 
                     Importance =
-                        IMP$cluster_progressive[
+                        PROGRESSIVE_ALIGNED[
                             k_id,
                             j,
                             H
@@ -813,7 +1761,10 @@ p_progressive_heatmap <- ggplot(
             "steelblue",
 
         limits =
-            c(0, 1)
+            c(
+                0,
+                1
+            )
     ) +
 
     labs(
@@ -822,7 +1773,7 @@ p_progressive_heatmap <- ggplot(
             "Progressive feature importance",
 
         subtitle =
-            "Patients grouped by final full-trajectory assignment",
+            "PC1; unseen patients grouped by final full-trajectory assignment",
 
         x =
             "Number of observed visits",
@@ -876,7 +1827,10 @@ p_progressive_lines <- ggplot(
     ) +
 
     coord_cartesian(
-        ylim = c(0, 1)
+        ylim = c(
+            0,
+            1
+        )
     ) +
 
     labs(
@@ -885,7 +1839,7 @@ p_progressive_lines <- ggplot(
             "Evolution of feature importance",
 
         subtitle =
-            "Patients grouped by final full-trajectory assignment",
+            "Unseen patients grouped by final full-trajectory assignment",
 
         x =
             "Number of observed visits",
@@ -913,8 +1867,48 @@ print(
 
 
 # ======================================================================
-# INCREMENTAL IMPORTANCE DATA
 # ======================================================================
+#
+# PART VIII
+#
+# INCREMENTAL IMPORTANCE
+#
+# ======================================================================
+# ======================================================================
+
+
+INCREMENTAL_ALIGNED <- array(
+
+    NA_real_,
+
+    dim = c(
+        SET_K,
+        ncol(DD),
+        N_VISITS
+    )
+)
+
+
+for(old_cluster in seq_len(
+    SET_K
+)) {
+
+    new_cluster <-
+        ALIGN_IND$mapping[
+            old_cluster
+        ]
+
+
+    INCREMENTAL_ALIGNED[
+        new_cluster,
+        ,
+    ] <-
+        IMP$incremental[
+            old_cluster,
+            ,
+        ]
+}
+
 
 INCREMENTAL_DF <- data.frame()
 
@@ -942,13 +1936,15 @@ for(k_id in seq_len(
                         ),
 
                     Feature =
-                        colnames(DD)[j],
+                        colnames(
+                            DD
+                        )[j],
 
                     Visit =
                         H,
 
                     Change =
-                        IMP$incremental[
+                        INCREMENTAL_ALIGNED[
                             k_id,
                             j,
                             H
@@ -1028,11 +2024,15 @@ print(
 
 
 # ======================================================================
+# ======================================================================
+#
+# PART IX
+#
 # ASSIGNMENT STABILITY
 #
-# Agreement of prefix assignment with the patient's final
-# full-trajectory assignment.
 # ======================================================================
+# ======================================================================
+
 
 FINAL_CLUSTER <-
     IMP$final_cluster
@@ -1045,10 +2045,12 @@ STABILITY <- sapply(
     function(H) {
 
         mean(
+
             IMP$predicted_cluster[
                 ,
                 H
             ] ==
+
             FINAL_CLUSTER
         )
     }
@@ -1080,18 +2082,40 @@ print(
 
 # ======================================================================
 # FIGURE 5:
-# PROGRESSIVE ARI
+# TRANSDUCTIVE vs PROGRESSIVE INDUCTIVE ARI
 # ======================================================================
+
+PERFORMANCE_PLOT <- data.frame(
+
+    Visit =
+        HORIZONS,
+
+    ARI =
+        ARI_PREFIX
+)
+
 
 p_ari <- ggplot(
 
-    PERFORMANCE,
+    PERFORMANCE_PLOT,
 
     aes(
         x = Visit,
         y = ARI
     )
 ) +
+
+    geom_hline(
+
+        yintercept =
+            ARI_TRANSDUCTIVE,
+
+        linetype =
+            "dashed",
+
+        linewidth =
+            0.9
+    ) +
 
     geom_line(
         linewidth = 1.1
@@ -1106,13 +2130,25 @@ p_ari <- ggplot(
     ) +
 
     coord_cartesian(
-        ylim = c(0, 1)
+        ylim = c(
+            0,
+            1
+        )
     ) +
 
     labs(
 
         title =
-            "Progressive trajectory assignment",
+            "Transductive vs progressive inductive clustering",
+
+        subtitle =
+            paste0(
+                "PC1; dashed line = transductive ARI = ",
+                sprintf(
+                    "%.3f",
+                    ARI_TRANSDUCTIVE
+                )
+            ),
 
         x =
             "Number of observed visits",
@@ -1159,13 +2195,16 @@ p_stability <- ggplot(
     ) +
 
     coord_cartesian(
-        ylim = c(0, 1)
+        ylim = c(
+            0,
+            1
+        )
     ) +
 
     labs(
 
         title =
-            "Stabilization of cluster assignment",
+            "Stabilization of inductive cluster assignment",
 
         x =
             "Number of observed visits",
@@ -1185,8 +2224,15 @@ print(
 
 
 # ======================================================================
-# EXAMPLE PATIENT
 # ======================================================================
+#
+# PART X
+#
+# PATIENT-SPECIFIC IMPORTANCE
+#
+# ======================================================================
+# ======================================================================
+
 
 EXAMPLE_PATIENT <- 1
 
@@ -1195,7 +2241,9 @@ PATIENT_DF <- data.frame()
 
 
 for(j in seq_len(
-    ncol(DD)
+    ncol(
+        DD
+    )
 )) {
 
     PATIENT_DF <- rbind(
@@ -1208,7 +2256,9 @@ for(j in seq_len(
                 HORIZONS,
 
             Feature =
-                colnames(DD)[j],
+                colnames(
+                    DD
+                )[j],
 
             Importance =
                 IMP$patient[
@@ -1250,15 +2300,26 @@ p_patient <- ggplot(
     ) +
 
     coord_cartesian(
-        ylim = c(0, 1)
+        ylim = c(
+            0,
+            1
+        )
     ) +
 
     labs(
 
         title =
             paste0(
-                "Patient-specific importance: patient ",
+                "Patient-specific importance: unseen patient ",
                 EXAMPLE_PATIENT
+            ),
+
+        subtitle =
+            paste0(
+                "Final assigned reference cluster = ",
+                FINAL_CLUSTER[
+                    EXAMPLE_PATIENT
+                ]
             ),
 
         x =
@@ -1287,8 +2348,158 @@ print(
 
 
 # ======================================================================
-# FINAL OUTPUT
 # ======================================================================
+#
+# PART XI
+#
+# IMPORTANCE DIFFERENCE
+#
+# ======================================================================
+# ======================================================================
+
+
+IMPORTANCE_DIFFERENCE <-
+
+    IMP_INDUCTIVE_ALIGNED -
+
+    IMP_TRANSDUCTIVE_ALIGNED
+
+
+cat("\n")
+cat("======================================================================\n")
+cat("INDUCTIVE - TRANSDUCTIVE IMPORTANCE DIFFERENCE\n")
+cat("======================================================================\n")
+
+
+print(
+
+    round(
+        IMPORTANCE_DIFFERENCE,
+        3
+    )
+)
+
+
+DIFF_DF <- data.frame()
+
+
+for(k_id in seq_len(
+    SET_K
+)) {
+
+    for(j in seq_len(
+        ncol(
+            DD
+        )
+    )) {
+
+        DIFF_DF <- rbind(
+
+            DIFF_DF,
+
+            data.frame(
+
+                Cluster =
+                    paste0(
+                        "Cluster ",
+                        k_id
+                    ),
+
+                Feature =
+                    colnames(
+                        DD
+                    )[j],
+
+                Difference =
+                    IMPORTANCE_DIFFERENCE[
+                        k_id,
+                        j
+                    ]
+            )
+        )
+    }
+}
+
+
+# ======================================================================
+# FIGURE 8:
+# IMPORTANCE DIFFERENCE
+# ======================================================================
+
+p_importance_difference <- ggplot(
+
+    DIFF_DF,
+
+    aes(
+        x = Feature,
+        y = Cluster,
+        fill = Difference
+    )
+) +
+
+    geom_tile() +
+
+    geom_text(
+
+        aes(
+            label =
+                sprintf(
+                    "%+.2f",
+                    Difference
+                )
+        ),
+
+        size = 3.8
+    ) +
+
+    scale_fill_gradient2(
+
+        low =
+            "firebrick",
+
+        mid =
+            "white",
+
+        high =
+            "steelblue",
+
+        midpoint =
+            0
+    ) +
+
+    labs(
+
+        title =
+            "Change in feature importance after inductive reformulation",
+
+        subtitle =
+            "Inductive minus original transductive importance; PC1",
+
+        x =
+            "Feature",
+
+        y =
+            "Trajectory cluster"
+    ) +
+
+    theme_minimal(
+        base_size = 14
+    )
+
+
+print(
+    p_importance_difference
+)
+
+
+# ======================================================================
+# ======================================================================
+#
+# FINAL OUTPUT
+#
+# ======================================================================
+# ======================================================================
+
 
 cat("\n")
 cat("======================================================================\n")
@@ -1297,38 +2508,119 @@ cat("======================================================================\n")
 
 
 cat(
+    "PCA strategy                    : PC1\n"
+)
+
+
+cat(
+
     sprintf(
-        "Visit 1 ARI         : %.3f\n",
-        ARI_PREFIX[1]
+
+        "Transductive ARI               : %.3f\n",
+
+        ARI_TRANSDUCTIVE
     )
 )
 
 
 cat(
+
     sprintf(
-        "Visit 5 ARI         : %.3f\n",
-        ARI_PREFIX[5]
+
+        "Transductive NMI               : %.3f\n",
+
+        NMI_TRANSDUCTIVE
+    )
+)
+
+
+cat("\n")
+
+
+for(H in HORIZONS) {
+
+    cat(
+
+        sprintf(
+
+            "Inductive visit %d ARI        : %.3f\n",
+
+            H,
+
+            ARI_PREFIX[H]
+        )
+    )
+}
+
+
+cat("\n")
+
+
+cat(
+
+    sprintf(
+
+        "Full inductive ARI             : %.3f\n",
+
+        ARI_PREFIX[
+            N_VISITS
+        ]
     )
 )
 
 
 cat(
+
     sprintf(
-        "Full trajectory ARI : %.3f\n",
-        ARI_PREFIX[N_VISITS]
+
+        "Full inductive NMI             : %.3f\n",
+
+        NMI_PREFIX[
+            N_VISITS
+        ]
     )
 )
 
 
 cat(
+
     sprintf(
-        "Full trajectory NMI : %.3f\n",
-        NMI_PREFIX[N_VISITS]
+
+        "Inductive-transductive ARI gap : %+.3f\n",
+
+        INDUCTIVE_GAP_ARI
     )
 )
 
 
-cat("\nFinal predicted cluster sizes:\n")
+cat(
+
+    sprintf(
+
+        "Inductive-transductive NMI gap : %+.3f\n",
+
+        INDUCTIVE_GAP_NMI
+    )
+)
+
+
+cat(
+
+    sprintf(
+
+        "Mean importance Spearman       : %.3f\n",
+
+        mean(
+            IMPORTANCE_CORRELATION$Spearman,
+            na.rm = TRUE
+        )
+    )
+)
+
+
+cat(
+    "\nFinal inductive predicted cluster sizes:\n"
+)
 
 
 print(
@@ -1338,14 +2630,43 @@ print(
 )
 
 
-cat("\nGlobal feature importance:\n")
+cat(
+    "\nOriginal transductive importance:\n"
+)
 
 
 print(
+
     round(
-        IMP$global,
+        IMP_TRANSDUCTIVE_ALIGNED,
         3
     )
+)
+
+
+cat(
+    "\nInductive global importance:\n"
+)
+
+
+print(
+
+    round(
+        IMP_INDUCTIVE_ALIGNED,
+        3
+    )
+)
+
+
+cat(
+    "\nImportance correlations:\n"
+)
+
+
+print(
+    IMPORTANCE_CORRELATION,
+    digits = 3,
+    row.names = FALSE
 )
 
 

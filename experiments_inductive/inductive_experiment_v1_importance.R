@@ -77,7 +77,7 @@ REPLACE_FEATURES <- TRUE
 # USE FIRST PRINCIPAL COMPONENT
 # ======================================================================
 
-PCA_SELECTION <- "first"
+PCA_SELECTION <- "random_weighted"
 
 
 HORIZONS <- seq_len(
@@ -536,7 +536,7 @@ TRANSDUCTIVE <- longTAPIO_trajectories(
         REPLACE_FEATURES,
 
     pca_selection =
-        "first"
+        PCA_SELECTION
 )
 
 
@@ -903,7 +903,7 @@ model <- longTAPIO_inductive(
         REPLACE_FEATURES,
 
     pca_selection =
-        "first"
+        PCA_SELECTION
 )
 
 
@@ -978,34 +978,34 @@ cat(
 # ALL TREES MUST USE PC1
 # ======================================================================
 
-SELECTED_PCS <- sapply(
-
-    model$trees,
-
-    function(x) {
-        x$selected_pc
-    }
-)
-
-
-if(
-    any(
-        SELECTED_PCS != 1
-    )
-) {
-
-    stop(
-        paste0(
-            "ERROR: inductive model is not using PC1 in every tree. ",
-            "Modify longTAPIO_inductive() as shown below."
-        )
-    )
-}
+#SELECTED_PCS <- sapply(
+#
+#    model$trees,
+#
+#    function(x) {
+#        x$selected_pc
+#    }
+#)
 
 
-cat(
-    "\nVerified: all inductive trees use PC1.\n"
-)
+#if(
+#    any(
+#        SELECTED_PCS != 1
+#    )
+#) {
+#
+#    stop(
+#        paste0(
+#            "ERROR: inductive model is not using PC1 in every tree. ",
+#            "Modify longTAPIO_inductive() as shown below."
+#        )
+#    )
+#}
+
+
+#cat(
+#    "\nVerified: all inductive trees use PC1.\n"
+#)
 
 
 # ======================================================================
@@ -1194,10 +1194,10 @@ COMPARISON <- data.frame(
 
     Method = c(
 
-        "Original longTAPIO (transductive, PC1)",
+        "Original longTAPIO (transductive)",
 
         paste0(
-            "Inductive longTAPIO PC1 (visit ",
+            "Inductive longTAPIO (visit ",
             HORIZONS,
             ")"
         )

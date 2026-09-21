@@ -238,7 +238,8 @@ longTAPIO_inductive <- function(
     replace = TRUE,
     pca_selection = c(
         "first",
-        "random_weighted"
+        "random_weighted",
+        "random_weighted_95"
     )
 ) {
 
@@ -398,8 +399,13 @@ longTAPIO_inductive <- function(
         #   deterministic PC1
         #
         # random_weighted:
-        #   random PC with probability proportional to explained
-        #   variance
+        #   random PC from all PCs with probability proportional
+        #   to explained variance
+        #
+        # random_weighted_95:
+        #   retain the smallest set of leading PCs explaining at least
+        #   95% of total variance, then randomly select one PC from this
+        #   set with probability proportional to explained variance
         # ==============================================================
 
         if(
@@ -408,7 +414,9 @@ longTAPIO_inductive <- function(
 
             selected_pc <- 1L
 
-        } else {
+        } else if(
+            pca_selection == "random_weighted"
+        ) {
 
             prob <-
                 eigenvalues /
@@ -416,13 +424,58 @@ longTAPIO_inductive <- function(
                     eigenvalues
                 )
 
-
             selected_pc <- sample(
                 seq_along(
                     prob
                 ),
                 size = 1,
                 prob = prob
+            )
+
+        } else if(
+            pca_selection == "random_weighted_95"
+        ) {
+
+            # Explained variance ratio
+            explained_variance <-
+                eigenvalues /
+                sum(
+                    eigenvalues
+                )
+
+            # Smallest number of leading PCs explaining >= 95%
+            n_pc <- which(
+                cumsum(
+                    explained_variance
+                ) >= 0.95
+            )[1]
+
+            eligible_pc <- seq_len(
+                n_pc
+            )
+
+            # Variance-weighted probabilities within retained PCs
+            prob <-
+                eigenvalues[
+                    eligible_pc
+                ] /
+                sum(
+                    eigenvalues[
+                        eligible_pc
+                    ]
+                )
+
+            selected_pc <- sample(
+                eligible_pc,
+                size = 1,
+                prob = prob
+            )
+
+        } else {
+
+            stop(
+                "Unknown pca_selection: ",
+                pca_selection
             )
         }
 

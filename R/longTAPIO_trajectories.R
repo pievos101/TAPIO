@@ -99,6 +99,25 @@ longTAPIO_trajectories <- function(DATA, user_id = NULL, k=NaN, n_features=NaN, 
 
 			}
 			
+			if(pca_selection == "random_weighted_95"){
+
+				eig_vals = res.pca$sdev^2
+				explained = eig_vals / sum(eig_vals)
+
+				# Smallest number of PCs explaining at least 95% variance
+				n_pc = which(cumsum(explained) >= 0.95)[1]
+
+				# Only these PCs are eligible
+				eligible = 1:n_pc
+
+				# Keep variance-weighted sampling within eligible PCs
+				prob = eig_vals[eligible]
+				prob = prob / sum(prob)
+
+				sel = sample(eligible, size = 1, prob = prob)
+
+			}
+			
 			DATA_s = res.pca$x[,sel] # selected PCA
 			IMP[[xx]] = var$contrib[,sel]
 

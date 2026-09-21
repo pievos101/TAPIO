@@ -12,7 +12,7 @@
 #' @param levels Number of levels to cut the dendrogram
 #' @param max.k Number of maximum clusters when k=NaN
 #' @param verbose Print details (default=FALSE)
-#' @param pca_selection "first" or "random_weighted"
+#' @param pca_selection "first" or "random_weighted" or "random_weighted_95"
 #' @return The cluster solution 
 #'
 #' @examples
@@ -98,7 +98,7 @@ longTAPIO_trajectories <- function(DATA, user_id = NULL, k=NaN, n_features=NaN, 
     			sel = sample(1:length(prob), size = 1, prob = prob)
 
 			}
-			
+
 			if(pca_selection == "random_weighted_95"){
 
 				eig_vals = res.pca$sdev^2

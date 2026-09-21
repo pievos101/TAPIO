@@ -294,7 +294,7 @@ longTAPIO_inductive <- function(
     p <- ncol(DATA)
 
 
-    if(is.null(n_features)) {
+    if(is.na(n_features)) {
 
         n_features <- max(
             1L,

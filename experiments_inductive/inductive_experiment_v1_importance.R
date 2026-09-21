@@ -55,7 +55,7 @@ library(clue)
 
 TRAIN_FRAC <- 0.70
 
-N_VISITS <- 5
+N_VISITS <- 10
 
 SET_K <- 4
 

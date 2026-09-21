@@ -251,6 +251,7 @@ longTAPIO_inductive <- function(
         pca_selection
     )
 
+    #print(pca_selection)
 
     DATA <- as.matrix(DATA)
 

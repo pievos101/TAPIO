@@ -1765,9 +1765,9 @@ PLOT_BIOMARKER_TRAJECTORIES <- ggplot(
 
         ~ Feature,
 
-        ncol = 3,
+        ncol = 3#,
 
-        scales = "free_y"
+        #scales = "free_y"
     ) +
 
     scale_x_continuous(

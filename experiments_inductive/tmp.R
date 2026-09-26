@@ -1,54 +1,73 @@
 # =============================================================================
-# PBC2 - K = 2 INDUCTIVE longTAPIO
+# PBC2 - INDUCTIVE / INTERPRETABILITY DEMONSTRATION FOR longTAPIO
 #
-# COMPLETE FINAL ANALYSIS
+# PURPOSE
+#
+# Demonstrate properties that are specifically useful for an inductive,
+# interpretable longitudinal clustering method:
+#
+# 1. Progressive prediction of unseen patients
+# 2. Prediction confidence / margin
+# 3. Relationship between confidence and final assignment
+# 4. Patient-specific feature importance
+# 5. Convergence of early explanations toward final explanations
+# 6. Representative stable and switching patients
+#
 #
 # FIGURE 1:
-#   Progressive assignment ARI across visits
+#   Prediction confidence across visits
 #
 # FIGURE 2:
-#   Kaplan-Meier curves of TRAINING clusters using survminer
+#   Confidence for correct vs changing early assignments
 #
 # FIGURE 3:
-#   Overall feature-importance evolution
+#   Explanation convergence across visits
 #
 # FIGURE 4:
-#   Cluster-specific feature-importance evolution
+#   Confidence versus explanation convergence
 #
 # FIGURE 5:
-#   Actual biomarker trajectories by cluster
-#   -> shows DIRECTION: higher/lower biomarker values in each cluster
+#   Patient-specific importance evolution
+#
+# FIGURE 6:
+#   Patient-level prediction trajectory + confidence
 #
 # =============================================================================
 
 
 # =============================================================================
-# 0. PACKAGES
+# PACKAGES
 # =============================================================================
 
 library(DynForest)
-library(survival)
-library(survminer)
 library(ggplot2)
 library(aricode)
+library(survival)
+library(survminer)
 
 
 # =============================================================================
-# 1. CHECK longTAPIO FUNCTIONS
+# CHECK FUNCTIONS
 # =============================================================================
 
 if(!exists("longTAPIO_inductive")) {
-    stop("Please source longTAPIO_inductive() first.")
+
+    stop(
+        "Please source longTAPIO_inductive() first."
+    )
 }
 
 
 if(!exists("importance_longTAPIO_inductive")) {
-    stop("Please source importance_longTAPIO_inductive() first.")
+
+    stop(
+        "Please source importance_longTAPIO_inductive() first."
+    )
 }
 
 
 # =============================================================================
-# 2. SETTINGS
+# SETTINGS
 # =============================================================================
 
 SEED <- 42
@@ -59,7 +78,10 @@ TRAIN_FRACTION <- 0.70
 
 MAX_VISITS <- 5
 
-HORIZONS <- 1:MAX_VISITS
+HORIZONS <- seq_len(
+    MAX_VISITS
+)
+
 
 N_TREES <- 500
 
@@ -89,7 +111,7 @@ LOG_FEATURES <- c(
 
 
 # =============================================================================
-# 3. LOAD PBC2
+# LOAD PBC2
 # =============================================================================
 
 data(
@@ -103,7 +125,7 @@ PBC <- pbc2
 
 cat("\n")
 cat("==============================================================================================================\n")
-cat("PBC2 - K=2 INDUCTIVE longTAPIO\n")
+cat("PBC2 - INDUCTIVE longTAPIO INTERPRETABILITY ANALYSIS\n")
 cat("==============================================================================================================\n")
 
 
@@ -123,26 +145,8 @@ cat(
 )
 
 
-cat("\nOriginal event coding:\n")
-
-print(
-    table(PBC$event)
-)
-
-
 # =============================================================================
-# 4. DEATH ENDPOINT
-# =============================================================================
-#
-# PBC2:
-#
-# 0 = censored
-# 1 = transplantation
-# 2 = death
-#
-# We perform death-specific survival analysis.
-# Transplantation is treated as censoring.
-#
+# DEATH ENDPOINT
 # =============================================================================
 
 PBC$death_event <- ifelse(
@@ -153,7 +157,7 @@ PBC$death_event <- ifelse(
 
 
 # =============================================================================
-# 5. PATIENT-LEVEL SURVIVAL DATA
+# PATIENT-LEVEL SURVIVAL
 # =============================================================================
 
 extract_patient_survival <- function(dat) {
@@ -200,12 +204,18 @@ extract_patient_survival <- function(dat) {
 
 
         if(length(survival_values) != 1) {
-            stop("Non-unique survival time.")
+
+            stop(
+                "Non-unique survival time."
+            )
         }
 
 
         if(length(death_values) != 1) {
-            stop("Non-unique death endpoint.")
+
+            stop(
+                "Non-unique death endpoint."
+            )
         }
 
 
@@ -255,7 +265,7 @@ SURVIVAL_DATA <- extract_patient_survival(
 
 
 # =============================================================================
-# 6. PREPARE LONGITUDINAL DATA
+# PREPARE LONGITUDINAL COHORT
 # =============================================================================
 
 prepare_pbc2 <- function(
@@ -331,7 +341,9 @@ prepare_pbc2 <- function(
         function(d) {
 
             d <- d[
-                order(d$time),
+                order(
+                    d$time
+                ),
                 ,
                 drop = FALSE
             ]
@@ -527,6 +539,7 @@ cat(
     sep = ""
 )
 
+
 cat(
     "Deaths   : ",
     sum(PATIENT_DATA$event),
@@ -536,7 +549,7 @@ cat(
 
 
 # =============================================================================
-# 7. CREATE PATIENT x VISIT x FEATURE ARRAY
+# CREATE PATIENT x VISIT x FEATURE ARRAY
 # =============================================================================
 
 pbc2_to_array <- function(
@@ -622,22 +635,11 @@ X_RAW <- pbc2_to_array(
 )
 
 
-# =============================================================================
-# IMPORTANT:
-#
-# X_RAW contains ORIGINAL biomarker values.
-#
-# We retain this because Figure 5 should show actual biomarker direction,
-# not transformed/scaled values.
-#
-# =============================================================================
-
-
 X <- X_RAW
 
 
 # =============================================================================
-# 8. LOG TRANSFORM MODEL INPUT
+# LOG TRANSFORMATION
 # =============================================================================
 
 for(feature_name in LOG_FEATURES) {
@@ -655,7 +657,7 @@ for(feature_name in LOG_FEATURES) {
 
 
 # =============================================================================
-# 9. ARRAY -> longTAPIO FORMAT
+# ARRAY -> longTAPIO FORMAT
 # =============================================================================
 
 array_to_longTAPIO <- function(X) {
@@ -711,7 +713,7 @@ array_to_longTAPIO <- function(X) {
 
 
 # =============================================================================
-# 10. TRAIN / TEST SPLIT
+# TRAIN / TEST SPLIT
 # =============================================================================
 
 make_split <- function(
@@ -720,7 +722,9 @@ make_split <- function(
     seed
 ) {
 
-    set.seed(seed)
+    set.seed(
+        seed
+    )
 
 
     train_idx <- integer(0)
@@ -801,22 +805,6 @@ X_TEST <- X[
 ]
 
 
-X_RAW_TRAIN <- X_RAW[
-    TRAIN_IDX,
-    ,
-    ,
-    drop = FALSE
-]
-
-
-X_RAW_TEST <- X_RAW[
-    TEST_IDX,
-    ,
-    ,
-    drop = FALSE
-]
-
-
 SURV_TRAIN <- PATIENT_DATA[
     TRAIN_IDX,
     ,
@@ -841,39 +829,14 @@ TEST_PREP <- array_to_longTAPIO(
 )
 
 
-cat("\n")
-
-cat(
-    "Training patients : ",
-    nrow(SURV_TRAIN),
-    "\n",
-    sep = ""
-)
-
-cat(
-    "Test patients     : ",
-    nrow(SURV_TEST),
-    "\n",
-    sep = ""
-)
-
-cat(
-    "Training deaths   : ",
-    sum(SURV_TRAIN$event),
-    "\n",
-    sep = ""
-)
-
-cat(
-    "Test deaths       : ",
-    sum(SURV_TEST$event),
-    "\n",
-    sep = ""
-)
+cat("\nTraining patients : ", nrow(SURV_TRAIN), "\n", sep = "")
+cat("Test patients     : ", nrow(SURV_TEST), "\n", sep = "")
+cat("Training deaths   : ", sum(SURV_TRAIN$event), "\n", sep = "")
+cat("Test deaths       : ", sum(SURV_TEST$event), "\n", sep = "")
 
 
 # =============================================================================
-# 11. FIT longTAPIO
+# FIT longTAPIO
 # =============================================================================
 
 N_FEATURES_TREE <- max(
@@ -926,7 +889,7 @@ TRAIN_CLUSTER <- as.integer(
 )
 
 
-cat("\nTraining cluster sizes:\n")
+cat("\nTraining clusters:\n")
 
 print(
     table(
@@ -936,7 +899,7 @@ print(
 
 
 # =============================================================================
-# 12. DEFINE RISK LABELS FROM TRAINING SURVIVAL
+# RISK LABELS - TRAINING SURVIVAL ONLY
 # =============================================================================
 
 TRAIN_SURVIVAL <- data.frame(
@@ -986,147 +949,8 @@ risk_label <- function(cluster) {
 }
 
 
-TRAIN_SURVIVAL$risk_group <- factor(
-
-    risk_label(
-        TRAIN_CLUSTER
-    ),
-
-    levels = c(
-        "Lower-risk trajectory",
-        "Higher-risk trajectory"
-    )
-)
-
-
 # =============================================================================
-# 13. KAPLAN-MEIER
-# =============================================================================
-
-KM_TRAIN <- survival::survfit(
-
-    survival::Surv(
-        time,
-        event
-    ) ~ risk_group,
-
-    data = TRAIN_SURVIVAL
-)
-
-
-LOGRANK_TRAIN <- survival::survdiff(
-
-    survival::Surv(
-        time,
-        event
-    ) ~ risk_group,
-
-    data = TRAIN_SURVIVAL
-)
-
-
-TRAIN_CHISQ <- as.numeric(
-    LOGRANK_TRAIN$chisq
-)
-
-
-TRAIN_P <- pchisq(
-
-    TRAIN_CHISQ,
-
-    df = 1,
-
-    lower.tail = FALSE
-)
-
-
-# =============================================================================
-# FIGURE 1
-# KAPLAN-MEIER
-# =============================================================================
-
-PLOT_KM <- survminer::ggsurvplot(
-
-    fit =
-        KM_TRAIN,
-
-    data =
-        TRAIN_SURVIVAL,
-
-    pval =
-        TRUE,
-
-    pval.method =
-        TRUE,
-
-    conf.int =
-        TRUE,
-
-    risk.table =
-        TRUE,
-
-    risk.table.height =
-        0.25,
-
-    risk.table.y.text =
-        FALSE,
-
-    risk.table.col =
-        "strata",
-
-    censor =
-        TRUE,
-
-    censor.shape =
-        124,
-
-    censor.size =
-        3,
-
-    xlab =
-        "Years after fifth-visit landmark",
-
-    ylab =
-        "Survival probability",
-
-    break.time.by =
-        1,
-
-    surv.scale =
-        "percent",
-
-    legend.title =
-        "Trajectory cluster",
-
-    legend.labs =
-        c(
-            "Lower-risk trajectory",
-            "Higher-risk trajectory"
-        ),
-
-    legend =
-        "bottom",
-
-    size =
-        1.2,
-
-    ggtheme =
-        theme_classic(
-            base_size = 14
-        ),
-
-    title =
-        "Survival of training-derived trajectory clusters"
-)
-
-
-print(
-    PLOT_KM
-)
-
-
-# =============================================================================
-# 14. PROGRESSIVE TEST ASSIGNMENT + IMPORTANCE
+# INDUCTIVE PREDICTION + FEATURE IMPORTANCE
 # =============================================================================
 
 IMP <- importance_longTAPIO_inductive(
@@ -1141,86 +965,713 @@ IMP <- importance_longTAPIO_inductive(
 )
 
 
+PREDICTED_CLUSTER <- as.matrix(
+    IMP$predicted_cluster[
+        ,
+        HORIZONS,
+        drop = FALSE
+    ]
+)
+
+
 FINAL_CLUSTER <- as.integer(
-    IMP$predicted_cluster[, MAX_VISITS]
+    PREDICTED_CLUSTER[
+        ,
+        MAX_VISITS
+    ]
 )
 
 
 # =============================================================================
-# 15. PROGRESSIVE ARI
+# OBTAIN PREDICTION MARGINS DIRECTLY FROM predict()
+#
+# We call predict() at every prefix because the margin is an important
+# inductive uncertainty/confidence quantity.
 # =============================================================================
 
-ARI_VALUES <- numeric(
-    MAX_VISITS
+MARGIN_MATRIX <- matrix(
+
+    NA_real_,
+
+    nrow = length(TEST_IDX),
+
+    ncol = MAX_VISITS,
+
+    dimnames = list(
+        NULL,
+        paste0(
+            "Visit_",
+            HORIZONS
+        )
+    )
 )
 
 
-NMI_VALUES <- numeric(
-    MAX_VISITS
-)
+PREDICT_MATRIX_CHECK <- matrix(
 
+    NA_integer_,
 
-AGREEMENT_VALUES <- numeric(
-    MAX_VISITS
+    nrow = length(TEST_IDX),
+
+    ncol = MAX_VISITS
 )
 
 
 for(H in HORIZONS) {
 
-    PRED_H <- as.integer(
-        IMP$predicted_cluster[, H]
+    PRED_H <- predict(
+
+        MODEL,
+
+        newdata = TEST_PREP$DATA,
+
+        user_id = TEST_PREP$user_id,
+
+        visits = H
     )
 
 
-    ARI_VALUES[H] <- aricode::ARI(
-        FINAL_CLUSTER,
-        PRED_H
+    MARGIN_MATRIX[, H] <- as.numeric(
+        PRED_H$margin
     )
 
 
-    NMI_VALUES[H] <- aricode::NMI(
-        FINAL_CLUSTER,
-        PRED_H
-    )
-
-
-    AGREEMENT_VALUES[H] <- mean(
-        FINAL_CLUSTER ==
-            PRED_H
+    PREDICT_MATRIX_CHECK[, H] <- as.integer(
+        PRED_H$cluster
     )
 }
 
 
-PERFORMANCE <- data.frame(
+# =============================================================================
+# VERIFY PREDICTIONS
+# =============================================================================
 
-    Visit =
-        HORIZONS,
+if(
+    !all(
+        PREDICT_MATRIX_CHECK ==
+            PREDICTED_CLUSTER
+    )
+) {
 
-    ARI =
-        ARI_VALUES,
+    warning(
+        "Predictions from predict() and importance() differ."
+    )
+}
 
-    NMI =
-        NMI_VALUES,
 
-    Agreement =
-        AGREEMENT_VALUES
+# =============================================================================
+# LONG PATIENT-PREDICTION DATA
+# =============================================================================
+
+PREDICTION_LONG <- data.frame()
+
+
+for(H in HORIZONS) {
+
+    tmp <- data.frame(
+
+        Patient =
+            seq_along(
+                FINAL_CLUSTER
+            ),
+
+        PatientID =
+            SURV_TEST$id,
+
+        Visit =
+            H,
+
+        Cluster =
+            as.integer(
+                PREDICTED_CLUSTER[, H]
+            ),
+
+        Final_cluster =
+            FINAL_CLUSTER,
+
+        Margin =
+            MARGIN_MATRIX[, H],
+
+        Correct_final =
+            as.integer(
+                PREDICTED_CLUSTER[, H] ==
+                    FINAL_CLUSTER
+            ),
+
+        Risk_group =
+            risk_label(
+                FINAL_CLUSTER
+            ),
+
+        stringsAsFactors = FALSE
+    )
+
+
+    PREDICTION_LONG <- rbind(
+        PREDICTION_LONG,
+        tmp
+    )
+}
+
+
+PREDICTION_LONG$Risk_group <- factor(
+
+    PREDICTION_LONG$Risk_group,
+
+    levels = c(
+        "Lower-risk trajectory",
+        "Higher-risk trajectory"
+    )
 )
 
 
 # =============================================================================
-# FIGURE 2
-# PROGRESSIVE ARI
+# ANALYSIS 1:
+# CONFIDENCE ACROSS VISITS
 # =============================================================================
 
-PLOT_ARI <- ggplot(
+CONFIDENCE_SUMMARY <- aggregate(
 
-    PERFORMANCE,
+    Margin ~ Visit,
+
+    data = PREDICTION_LONG,
+
+    FUN = function(x) {
+
+        c(
+            Mean = mean(
+                x,
+                na.rm = TRUE
+            ),
+
+            SE = sd(
+                x,
+                na.rm = TRUE
+            ) /
+                sqrt(
+                    sum(
+                        is.finite(x)
+                    )
+                )
+        )
+    }
+)
+
+
+CONFIDENCE_VISIT <- data.frame(
+
+    Visit =
+        CONFIDENCE_SUMMARY$Visit,
+
+    Mean_margin =
+        CONFIDENCE_SUMMARY$Margin[, "Mean"],
+
+    SE =
+        CONFIDENCE_SUMMARY$Margin[, "SE"]
+)
+
+
+cat("\n")
+cat("==============================================================================================================\n")
+cat("INDUCTIVE CONFIDENCE ACROSS VISITS\n")
+cat("==============================================================================================================\n\n")
+
+
+print(
+    CONFIDENCE_VISIT,
+    digits = 3,
+    row.names = FALSE
+)
+
+
+# =============================================================================
+# FIGURE 1:
+# CONFIDENCE ACROSS VISITS
+# =============================================================================
+
+PLOT_CONFIDENCE <- ggplot(
+
+    CONFIDENCE_VISIT,
 
     aes(
         x = Visit,
-        y = ARI
+        y = Mean_margin
     )
 ) +
+
+    geom_ribbon(
+
+        aes(
+            ymin =
+                Mean_margin - SE,
+
+            ymax =
+                Mean_margin + SE
+        ),
+
+        alpha = 0.18
+    ) +
+
+    geom_line(
+        linewidth = 1.3
+    ) +
+
+    geom_point(
+        size = 3.5
+    ) +
+
+    scale_x_continuous(
+        breaks = HORIZONS
+    ) +
+
+    labs(
+
+        title =
+            "Inductive prediction confidence increases with longitudinal information",
+
+        subtitle =
+            "Mean cluster-assignment margin in unseen patients",
+
+        x =
+            "Number of observed visits",
+
+        y =
+            "Prediction margin"
+    ) +
+
+    theme_classic(
+        base_size = 14
+    )
+
+
+print(
+    PLOT_CONFIDENCE
+)
+
+
+# =============================================================================
+# ANALYSIS 2:
+# DOES CONFIDENCE IDENTIFY RELIABLE EARLY ASSIGNMENTS?
+#
+# At visits 1-4:
+#
+# Correct_final = 1
+#     current assignment already equals eventual visit-5 assignment
+#
+# Correct_final = 0
+#     assignment will change before visit 5
+#
+# =============================================================================
+
+EARLY_PREDICTION <- PREDICTION_LONG[
+    PREDICTION_LONG$Visit < MAX_VISITS,
+    ,
+    drop = FALSE
+]
+
+
+EARLY_PREDICTION$Assignment_status <- ifelse(
+
+    EARLY_PREDICTION$Correct_final == 1,
+
+    "Already final",
+
+    "Changes later"
+)
+
+
+EARLY_PREDICTION$Assignment_status <- factor(
+
+    EARLY_PREDICTION$Assignment_status,
+
+    levels = c(
+        "Changes later",
+        "Already final"
+    )
+)
+
+
+CONFIDENCE_CORRECTNESS <- aggregate(
+
+    Margin ~ Visit + Assignment_status,
+
+    data = EARLY_PREDICTION,
+
+    FUN = mean
+)
+
+
+cat("\n")
+cat("==============================================================================================================\n")
+cat("CONFIDENCE AND EARLY ASSIGNMENT RELIABILITY\n")
+cat("==============================================================================================================\n\n")
+
+
+print(
+    CONFIDENCE_CORRECTNESS,
+    digits = 3,
+    row.names = FALSE
+)
+
+
+# =============================================================================
+# FIGURE 2:
+# CONFIDENCE OF STABLE/CORRECT VS CHANGING ASSIGNMENTS
+# =============================================================================
+
+PLOT_CONFIDENCE_CORRECTNESS <- ggplot(
+
+    EARLY_PREDICTION,
+
+    aes(
+        x = factor(Visit),
+        y = Margin,
+        fill = Assignment_status
+    )
+) +
+
+    geom_boxplot(
+
+        width = 0.68,
+
+        outlier.shape = NA
+    ) +
+
+    geom_jitter(
+
+        aes(
+            shape = Assignment_status
+        ),
+
+        width = 0.12,
+
+        alpha = 0.65,
+
+        size = 2
+    ) +
+
+    labs(
+
+        title =
+            "Prediction confidence identifies uncertain early assignments",
+
+        subtitle =
+            "Assignments are classified by whether they agree with the final five-visit cluster",
+
+        x =
+            "Number of observed visits",
+
+        y =
+            "Prediction margin",
+
+        fill =
+            "Early assignment",
+
+        shape =
+            "Early assignment"
+    ) +
+
+    theme_classic(
+        base_size = 14
+    ) +
+
+    theme(
+
+        legend.position =
+            "bottom",
+
+        plot.title =
+            element_text(
+                face = "bold"
+            )
+    )
+
+
+print(
+    PLOT_CONFIDENCE_CORRECTNESS
+)
+
+
+# =============================================================================
+# ANALYSIS 3:
+# PATIENT-SPECIFIC IMPORTANCE
+# =============================================================================
+
+N_TEST <- length(
+    FINAL_CLUSTER
+)
+
+
+N_FEATURES <- length(
+    FEATURES
+)
+
+
+# =============================================================================
+# EXPLANATION CONVERGENCE
+#
+# For every patient and every visit:
+#
+# compare current feature-importance vector with visit-5 importance vector.
+#
+# We use cosine similarity.
+#
+# 1.0 = identical direction of importance profile
+# 0   = unrelated importance profile
+#
+# =============================================================================
+
+cosine_similarity <- function(
+    x,
+    y
+) {
+
+    x <- as.numeric(x)
+
+    y <- as.numeric(y)
+
+
+    good <- (
+        is.finite(x) &
+        is.finite(y)
+    )
+
+
+    x <- x[good]
+
+    y <- y[good]
+
+
+    if(length(x) == 0) {
+
+        return(
+            NA_real_
+        )
+    }
+
+
+    nx <- sqrt(
+        sum(
+            x^2
+        )
+    )
+
+
+    ny <- sqrt(
+        sum(
+            y^2
+        )
+    )
+
+
+    if(
+        nx == 0 ||
+        ny == 0
+    ) {
+
+        return(
+            NA_real_
+        )
+    }
+
+
+    sum(
+        x * y
+    ) /
+        (
+            nx *
+            ny
+        )
+}
+
+
+EXPLANATION_CONVERGENCE <- matrix(
+
+    NA_real_,
+
+    nrow = N_TEST,
+
+    ncol = MAX_VISITS
+)
+
+
+for(i in seq_len(N_TEST)) {
+
+    final_importance <- IMP$patient[
+        i,
+        ,
+        MAX_VISITS
+    ]
+
+
+    for(H in HORIZONS) {
+
+        current_importance <- IMP$patient[
+            i,
+            ,
+            H
+        ]
+
+
+        EXPLANATION_CONVERGENCE[i, H] <-
+            cosine_similarity(
+                current_importance,
+                final_importance
+            )
+    }
+}
+
+
+# =============================================================================
+# LONG EXPLANATION DATA
+# =============================================================================
+
+EXPLANATION_LONG <- data.frame()
+
+
+for(H in HORIZONS) {
+
+    tmp <- data.frame(
+
+        Patient =
+            seq_len(N_TEST),
+
+        PatientID =
+            SURV_TEST$id,
+
+        Visit =
+            H,
+
+        Explanation_similarity =
+            EXPLANATION_CONVERGENCE[, H],
+
+        Margin =
+            MARGIN_MATRIX[, H],
+
+        Current_cluster =
+            PREDICTED_CLUSTER[, H],
+
+        Final_cluster =
+            FINAL_CLUSTER,
+
+        Correct_final =
+            as.integer(
+                PREDICTED_CLUSTER[, H] ==
+                    FINAL_CLUSTER
+            ),
+
+        Risk_group =
+            risk_label(
+                FINAL_CLUSTER
+            ),
+
+        stringsAsFactors = FALSE
+    )
+
+
+    EXPLANATION_LONG <- rbind(
+        EXPLANATION_LONG,
+        tmp
+    )
+}
+
+
+EXPLANATION_LONG$Risk_group <- factor(
+
+    EXPLANATION_LONG$Risk_group,
+
+    levels = c(
+        "Lower-risk trajectory",
+        "Higher-risk trajectory"
+    )
+)
+
+
+# =============================================================================
+# SUMMARY
+# =============================================================================
+
+EXPLANATION_SUMMARY_RAW <- aggregate(
+
+    Explanation_similarity ~ Visit,
+
+    data = EXPLANATION_LONG,
+
+    FUN = function(x) {
+
+        c(
+            Mean = mean(
+                x,
+                na.rm = TRUE
+            ),
+
+            SE = sd(
+                x,
+                na.rm = TRUE
+            ) /
+                sqrt(
+                    sum(
+                        is.finite(x)
+                    )
+                )
+        )
+    }
+)
+
+
+EXPLANATION_SUMMARY <- data.frame(
+
+    Visit =
+        EXPLANATION_SUMMARY_RAW$Visit,
+
+    Mean_similarity =
+        EXPLANATION_SUMMARY_RAW$Explanation_similarity[, "Mean"],
+
+    SE =
+        EXPLANATION_SUMMARY_RAW$Explanation_similarity[, "SE"]
+)
+
+
+cat("\n")
+cat("==============================================================================================================\n")
+cat("EXPLANATION CONVERGENCE\n")
+cat("==============================================================================================================\n\n")
+
+
+print(
+    EXPLANATION_SUMMARY,
+    digits = 3,
+    row.names = FALSE
+)
+
+
+# =============================================================================
+# FIGURE 3:
+# EXPLANATION CONVERGENCE
+# =============================================================================
+
+PLOT_EXPLANATION_CONVERGENCE <- ggplot(
+
+    EXPLANATION_SUMMARY,
+
+    aes(
+        x = Visit,
+        y = Mean_similarity
+    )
+) +
+
+    geom_ribbon(
+
+        aes(
+            ymin =
+                Mean_similarity - SE,
+
+            ymax =
+                Mean_similarity + SE
+        ),
+
+        alpha = 0.18
+    ) +
 
     geom_line(
         linewidth = 1.3
@@ -1235,7 +1686,7 @@ PLOT_ARI <- ggplot(
         aes(
             label = sprintf(
                 "%.2f",
-                ARI
+                Mean_similarity
             )
         ),
 
@@ -1249,655 +1700,162 @@ PLOT_ARI <- ggplot(
     ) +
 
     scale_y_continuous(
+
         limits = c(
             0,
             1.08
+        ),
+
+        breaks = seq(
+            0,
+            1,
+            0.2
         )
     ) +
 
     labs(
 
         title =
-            "Progressive trajectory-cluster assignment",
+            "Patient-specific explanations converge as observations accumulate",
 
         subtitle =
-            "Agreement with final five-visit assignment",
+            "Cosine similarity with each patient's final five-visit feature-importance profile",
 
         x =
             "Number of observed visits",
 
         y =
-            "Adjusted Rand Index"
+            "Explanation similarity"
     ) +
 
     theme_classic(
         base_size = 14
-    )
-
-
-print(
-    PLOT_ARI
-)
-
-
-# =============================================================================
-# 16. PATIENT-LEVEL FEATURE IMPORTANCE
-# =============================================================================
-
-IMPORTANCE_LIST <- list()
-
-counter <- 1L
-
-
-for(H in HORIZONS) {
-
-    for(j in seq_along(FEATURES)) {
-
-        IMPORTANCE_LIST[[counter]] <- data.frame(
-
-            Patient =
-                seq_along(
-                    FINAL_CLUSTER
-                ),
-
-            Visit =
-                H,
-
-            Feature =
-                FEATURES[j],
-
-            Importance =
-                as.numeric(
-                    IMP$patient[, j, H]
-                ),
-
-            Final_cluster =
-                FINAL_CLUSTER,
-
-            Risk_group =
-                risk_label(
-                    FINAL_CLUSTER
-                ),
-
-            stringsAsFactors = FALSE
-        )
-
-
-        counter <- counter + 1L
-    }
-}
-
-
-IMPORTANCE_PATIENT <- do.call(
-    rbind,
-    IMPORTANCE_LIST
-)
-
-
-IMPORTANCE_PATIENT$Risk_group <- factor(
-
-    IMPORTANCE_PATIENT$Risk_group,
-
-    levels = c(
-        "Lower-risk trajectory",
-        "Higher-risk trajectory"
-    )
-)
-
-
-# =============================================================================
-# 17. OVERALL IMPORTANCE
-# =============================================================================
-
-OVERALL_IMPORTANCE <- aggregate(
-
-    Importance ~ Visit + Feature,
-
-    data = IMPORTANCE_PATIENT,
-
-    FUN = mean
-)
-
-
-# =============================================================================
-# FIGURE 3
-# OVERALL IMPORTANCE EVOLUTION
-# =============================================================================
-
-PLOT_IMPORTANCE <- ggplot(
-
-    OVERALL_IMPORTANCE,
-
-    aes(
-        x = Visit,
-        y = Importance,
-        colour = Feature,
-        group = Feature
-    )
-) +
-
-    geom_line(
-        linewidth = 1.15
-    ) +
-
-    geom_point(
-        size = 2.7
-    ) +
-
-    scale_x_continuous(
-        breaks = HORIZONS
-    ) +
-
-    labs(
-
-        title =
-            "Evolution of biomarker importance",
-
-        x =
-            "Number of observed visits",
-
-        y =
-            "Normalized importance",
-
-        colour =
-            "Biomarker"
-    ) +
-
-    theme_classic(
-        base_size = 14
-    )
-
-
-print(
-    PLOT_IMPORTANCE
-)
-
-
-# =============================================================================
-# 18. CLUSTER-SPECIFIC IMPORTANCE
-# =============================================================================
-
-CLUSTER_IMPORTANCE <- aggregate(
-
-    Importance ~ Visit + Feature + Final_cluster + Risk_group,
-
-    data = IMPORTANCE_PATIENT,
-
-    FUN = mean
-)
-
-
-# =============================================================================
-# FIGURE 4
-# CLUSTER-SPECIFIC FEATURE IMPORTANCE
-# =============================================================================
-
-PLOT_CLUSTER_IMPORTANCE <- ggplot(
-
-    CLUSTER_IMPORTANCE,
-
-    aes(
-        x = Visit,
-        y = Importance,
-        colour = Feature,
-        group = Feature
-    )
-) +
-
-    geom_line(
-        linewidth = 1.15
-    ) +
-
-    geom_point(
-        size = 2.5
-    ) +
-
-    facet_wrap(
-
-        ~ Risk_group,
-
-        ncol = 1
-    ) +
-
-    scale_x_continuous(
-        breaks = HORIZONS
-    ) +
-
-    labs(
-
-        title =
-            "Cluster-specific evolution of biomarker importance",
-
-        subtitle =
-            "Patients grouped by final five-visit assignment",
-
-        x =
-            "Number of observed visits",
-
-        y =
-            "Normalized feature importance",
-
-        colour =
-            "Biomarker"
-    ) +
-
-    theme_classic(
-        base_size = 14
-    ) +
-
-    theme(
-
-        strip.text =
-            element_text(
-                face = "bold"
-            )
-    )
-
-
-print(
-    PLOT_CLUSTER_IMPORTANCE
-)
-
-
-# =============================================================================
-# 19. NEW ANALYSIS
-#
-# ACTUAL BIOMARKER VALUES BY CLUSTER
-#
-# This answers:
-#
-# "Which biomarkers are HIGHER or LOWER in each cluster?"
-#
-# IMPORTANT:
-#
-# We use RAW biomarker values here, not importance scores.
-#
-# To make biomarkers comparable in ONE figure, each biomarker is
-# standardized using TRAINING-set mean and SD.
-#
-# Thus:
-#
-#   z > 0 = above training population mean
-#   z < 0 = below training population mean
-#
-# =============================================================================
-
-
-# =============================================================================
-# 20. TRAINING-BASED STANDARDIZATION
-# =============================================================================
-
-P <- length(
-    FEATURES
-)
-
-
-TRAIN_MEAN <- numeric(
-    P
-)
-
-
-TRAIN_SD <- numeric(
-    P
-)
-
-
-names(TRAIN_MEAN) <- FEATURES
-
-names(TRAIN_SD) <- FEATURES
-
-
-for(j in seq_len(P)) {
-
-    TRAIN_MEAN[j] <- mean(
-        X_RAW_TRAIN[, , j],
-        na.rm = TRUE
-    )
-
-
-    TRAIN_SD[j] <- sd(
-        X_RAW_TRAIN[, , j],
-        na.rm = TRUE
-    )
-
-
-    if(
-        !is.finite(TRAIN_SD[j]) ||
-        TRAIN_SD[j] == 0
-    ) {
-
-        TRAIN_SD[j] <- 1
-    }
-}
-
-
-# =============================================================================
-# 21. STANDARDIZE RAW TEST BIOMARKERS
-# =============================================================================
-
-X_Z_TEST <- X_RAW_TEST
-
-
-for(j in seq_len(P)) {
-
-    X_Z_TEST[, , j] <- (
-        X_RAW_TEST[, , j] -
-        TRAIN_MEAN[j]
-    ) /
-        TRAIN_SD[j]
-}
-
-
-# =============================================================================
-# 22. LONG DATA FRAME OF STANDARDIZED BIOMARKER VALUES
-# =============================================================================
-
-BIOMARKER_LONG_LIST <- list()
-
-counter <- 1L
-
-
-for(i in seq_len(dim(X_Z_TEST)[1])) {
-
-    for(H in HORIZONS) {
-
-        for(j in seq_along(FEATURES)) {
-
-            BIOMARKER_LONG_LIST[[counter]] <- data.frame(
-
-                Patient =
-                    i,
-
-                PatientID =
-                    SURV_TEST$id[i],
-
-                Visit =
-                    H,
-
-                Feature =
-                    FEATURES[j],
-
-                Raw_value =
-                    X_RAW_TEST[i, H, j],
-
-                Z_value =
-                    X_Z_TEST[i, H, j],
-
-                Final_cluster =
-                    FINAL_CLUSTER[i],
-
-                Risk_group =
-                    risk_label(
-                        FINAL_CLUSTER[i]
-                    ),
-
-                stringsAsFactors = FALSE
-            )
-
-
-            counter <- counter + 1L
-        }
-    }
-}
-
-
-BIOMARKER_LONG <- do.call(
-    rbind,
-    BIOMARKER_LONG_LIST
-)
-
-
-BIOMARKER_LONG$Feature <- factor(
-
-    BIOMARKER_LONG$Feature,
-
-    levels = FEATURES
-)
-
-
-BIOMARKER_LONG$Risk_group <- factor(
-
-    BIOMARKER_LONG$Risk_group,
-
-    levels = c(
-        "Lower-risk trajectory",
-        "Higher-risk trajectory"
-    )
-)
-
-
-# =============================================================================
-# 23. MEAN BIOMARKER TRAJECTORY BY CLUSTER
-# =============================================================================
-
-BIOMARKER_CLUSTER_MEAN <- aggregate(
-
-    Z_value ~ Visit + Feature + Final_cluster + Risk_group,
-
-    data = BIOMARKER_LONG,
-
-    FUN = mean
-)
-
-
-BIOMARKER_CLUSTER_MEAN$Feature <- factor(
-
-    BIOMARKER_CLUSTER_MEAN$Feature,
-
-    levels = FEATURES
-)
-
-
-BIOMARKER_CLUSTER_MEAN$Risk_group <- factor(
-
-    BIOMARKER_CLUSTER_MEAN$Risk_group,
-
-    levels = c(
-        "Lower-risk trajectory",
-        "Higher-risk trajectory"
-    )
-)
-
-
-cat("\n")
-cat("==============================================================================================================\n")
-cat("STANDARDIZED BIOMARKER VALUES BY CLUSTER\n")
-cat("==============================================================================================================\n\n")
-
-
-print(
-    BIOMARKER_CLUSTER_MEAN,
-    digits = 3,
-    row.names = FALSE
-)
-
-
-# =============================================================================
-# FIGURE 5
-#
-# THE NEW IMPORTANT FIGURE:
-#
-# ACTUAL BIOMARKER TRAJECTORIES BY CLUSTER
-#
-# Each panel = one biomarker
-#
-# Two lines:
-#
-#   lower-risk trajectory
-#   higher-risk trajectory
-#
-# y-axis = standardized biomarker value
-#
-# 0 = overall training mean
-#
-# =============================================================================
-
-PLOT_BIOMARKER_TRAJECTORIES <- ggplot(
-
-    BIOMARKER_CLUSTER_MEAN,
-
-    aes(
-        x = Visit,
-        y = Z_value,
-        colour = Risk_group,
-        group = Risk_group
-    )
-) +
-
-    geom_hline(
-
-        yintercept = 0,
-
-        linetype = "dashed",
-
-        linewidth = 0.5
-    ) +
-
-    geom_line(
-        linewidth = 1.25
-    ) +
-
-    geom_point(
-        size = 2.8
-    ) +
-
-    facet_wrap(
-
-        ~ Feature,
-
-        ncol = 3,
-
-        scales = "free_y"
-    ) +
-
-    scale_x_continuous(
-        breaks = HORIZONS
-    ) +
-
-    labs(
-
-        title =
-            "Biomarker trajectories characterizing the two clusters",
-
-        subtitle =
-            "Values standardized relative to the training population",
-
-        x =
-            "Visit",
-
-        y =
-            "Standardized biomarker value (z-score)",
-
-        colour =
-            "Trajectory cluster"
-    ) +
-
-    theme_classic(
-        base_size = 13
     ) +
 
     theme(
 
         plot.title =
             element_text(
-                face = "bold",
-                size = 16
-            ),
-
-        plot.subtitle =
-            element_text(
-                size = 11
-            ),
-
-        strip.text =
-            element_text(
-                face = "bold",
-                size = 11
-            ),
-
-        legend.position =
-            "bottom",
-
-        legend.title =
-            element_text(
                 face = "bold"
             )
     )
 
 
 print(
-    PLOT_BIOMARKER_TRAJECTORIES
+    PLOT_EXPLANATION_CONVERGENCE
 )
 
 
 # =============================================================================
-# 24. OPTIONAL:
+# ANALYSIS 4:
+# CONFIDENCE VERSUS EXPLANATION CONVERGENCE
 #
-# FINAL VISIT BIOMARKER PROFILE
+# If useful, patients with confident assignments should often also have
+# relatively mature/stable explanations.
 #
-# This is useful because it gives a compact direct comparison of the
-# two clusters at visit 5.
-#
+# Exclude visit 5 because similarity is exactly 1 by construction.
 # =============================================================================
 
-FINAL_PROFILE <- BIOMARKER_CLUSTER_MEAN[
-    BIOMARKER_CLUSTER_MEAN$Visit == MAX_VISITS,
+CONF_EXPL <- EXPLANATION_LONG[
+    EXPLANATION_LONG$Visit < MAX_VISITS,
     ,
     drop = FALSE
 ]
 
 
-PLOT_FINAL_PROFILE <- ggplot(
+CONF_EXPL <- CONF_EXPL[
+    is.finite(CONF_EXPL$Margin) &
+    is.finite(CONF_EXPL$Explanation_similarity),
+    ,
+    drop = FALSE
+]
 
-    FINAL_PROFILE,
+
+COR_CONF_EXPL <- cor(
+
+    CONF_EXPL$Margin,
+
+    CONF_EXPL$Explanation_similarity,
+
+    method = "spearman"
+)
+
+
+cat("\n")
+cat("==============================================================================================================\n")
+cat("CONFIDENCE VS EXPLANATION CONVERGENCE\n")
+cat("==============================================================================================================\n\n")
+
+
+cat(
+    sprintf(
+        "Spearman rho = %.3f\n",
+        COR_CONF_EXPL
+    )
+)
+
+
+# =============================================================================
+# FIGURE 4:
+# CONFIDENCE VS EXPLANATION CONVERGENCE
+# =============================================================================
+
+PLOT_CONF_EXPL <- ggplot(
+
+    CONF_EXPL,
 
     aes(
-        x = Feature,
-        y = Z_value,
-        fill = Risk_group
+        x = Margin,
+        y = Explanation_similarity
     )
 ) +
 
-    geom_col(
+    geom_point(
 
-        position =
-            position_dodge(
-                width = 0.8
-            ),
+        aes(
+            shape = factor(Visit)
+        ),
 
-        width =
-            0.7
+        size = 2.7,
+
+        alpha = 0.75
     ) +
 
-    geom_hline(
+    geom_smooth(
 
-        yintercept = 0,
+        method = "lm",
 
-        linetype = "dashed"
+        se = TRUE,
+
+        linewidth = 1
     ) +
-
-    coord_flip() +
 
     labs(
 
         title =
-            "Biomarker profile after five visits",
+            "Prediction confidence and explanation maturity",
 
         subtitle =
-            "Standardized biomarker levels in the two trajectory clusters",
+            paste0(
+                "Visits 1-4; Spearman rho = ",
+                sprintf(
+                    "%.2f",
+                    COR_CONF_EXPL
+                )
+            ),
 
         x =
-            NULL,
+            "Prediction margin",
 
         y =
-            "Standardized biomarker value (z-score)",
+            "Similarity with final explanation",
 
-        fill =
-            "Trajectory cluster"
+        shape =
+            "Visit"
     ) +
 
     theme_classic(
-        base_size = 13
+        base_size = 14
     ) +
 
     theme(
@@ -1913,212 +1871,750 @@ PLOT_FINAL_PROFILE <- ggplot(
 
 
 print(
-    PLOT_FINAL_PROFILE
+    PLOT_CONF_EXPL
 )
 
 
 # =============================================================================
-# 25. SAVE TABLES
+# ANALYSIS 5:
+# TIME TO STABLE ASSIGNMENT
 # =============================================================================
 
-write.csv(
-
-    PERFORMANCE,
-
-    "PBC2_K2_progressive_ARI.csv",
-
-    row.names = FALSE
+STABLE_VISIT <- integer(
+    N_TEST
 )
 
 
-write.csv(
+for(i in seq_len(N_TEST)) {
 
-    OVERALL_IMPORTANCE,
+    final_i <- FINAL_CLUSTER[i]
 
-    "PBC2_K2_overall_importance.csv",
 
-    row.names = FALSE
+    stable_i <- MAX_VISITS
+
+
+    for(H in HORIZONS) {
+
+        if(
+            all(
+                PREDICTED_CLUSTER[
+                    i,
+                    H:MAX_VISITS
+                ] == final_i
+            )
+        ) {
+
+            stable_i <- H
+
+            break
+        }
+    }
+
+
+    STABLE_VISIT[i] <- stable_i
+}
+
+
+PATIENT_SUMMARY <- data.frame(
+
+    Patient =
+        seq_len(N_TEST),
+
+    PatientID =
+        SURV_TEST$id,
+
+    Final_cluster =
+        FINAL_CLUSTER,
+
+    Risk_group =
+        risk_label(
+            FINAL_CLUSTER
+        ),
+
+    Stable_from_visit =
+        STABLE_VISIT,
+
+    Final_margin =
+        MARGIN_MATRIX[
+            ,
+            MAX_VISITS
+        ],
+
+    Death =
+        SURV_TEST$event,
+
+    stringsAsFactors = FALSE
 )
 
 
-write.csv(
+PATIENT_SUMMARY$Risk_group <- factor(
 
-    CLUSTER_IMPORTANCE,
+    PATIENT_SUMMARY$Risk_group,
 
-    "PBC2_K2_cluster_specific_importance.csv",
-
-    row.names = FALSE
+    levels = c(
+        "Lower-risk trajectory",
+        "Higher-risk trajectory"
+    )
 )
 
 
-write.csv(
-
-    BIOMARKER_CLUSTER_MEAN,
-
-    "PBC2_K2_cluster_biomarker_trajectories.csv",
-
-    row.names = FALSE
-)
-
-
-write.csv(
-
-    FINAL_PROFILE,
-
-    "PBC2_K2_final_biomarker_profile.csv",
-
-    row.names = FALSE
-)
-
-
-# =============================================================================
-# 26. SAVE FIGURES
-# =============================================================================
-
-
-# -----------------------------------------------------------------------------
-# KM including risk table
-# -----------------------------------------------------------------------------
-
-pdf(
-    "PBC2_Figure1_KaplanMeier.pdf",
-    width = 7.5,
-    height = 7
-)
-
-print(
-    PLOT_KM
-)
-
-dev.off()
-
-
-# -----------------------------------------------------------------------------
-# ARI
-# -----------------------------------------------------------------------------
-
-ggsave(
-
-    "PBC2_Figure2_Progressive_ARI.pdf",
-
-    PLOT_ARI,
-
-    width = 6.5,
-
-    height = 5
-)
-
-
-# -----------------------------------------------------------------------------
-# Overall importance
-# -----------------------------------------------------------------------------
-
-ggsave(
-
-    "PBC2_Figure3_Overall_Importance.pdf",
-
-    PLOT_IMPORTANCE,
-
-    width = 8,
-
-    height = 5.5
-)
-
-
-# -----------------------------------------------------------------------------
-# Cluster-specific importance
-# -----------------------------------------------------------------------------
-
-ggsave(
-
-    "PBC2_Figure4_ClusterSpecific_Importance.pdf",
-
-    PLOT_CLUSTER_IMPORTANCE,
-
-    width = 8,
-
-    height = 7
-)
-
-
-# -----------------------------------------------------------------------------
-# Biomarker trajectories
-# -----------------------------------------------------------------------------
-
-ggsave(
-
-    "PBC2_Figure5_Biomarker_Trajectories.pdf",
-
-    PLOT_BIOMARKER_TRAJECTORIES,
-
-    width = 10,
-
-    height = 8
-)
-
-
-# -----------------------------------------------------------------------------
-# Final biomarker profile
-# -----------------------------------------------------------------------------
-
-ggsave(
-
-    "PBC2_Supplement_Final_Biomarker_Profile.pdf",
-
-    PLOT_FINAL_PROFILE,
-
-    width = 8,
-
-    height = 5
-)
-
-
-# =============================================================================
-# 27. FINAL SUMMARY
-# =============================================================================
-
-cat("\n\n")
+cat("\n")
 cat("==============================================================================================================\n")
-cat("FINAL PBC2 RESULTS\n")
+cat("TIME TO STABLE ASSIGNMENT\n")
 cat("==============================================================================================================\n\n")
 
 
-cat("TRAINING CLUSTERS\n\n")
-
 print(
     table(
-        TRAIN_CLUSTER
+        PATIENT_SUMMARY$Stable_from_visit
     )
 )
 
 
-cat("\nTRAINING SURVIVAL\n")
+# =============================================================================
+# SELECT REPRESENTATIVE PATIENTS
+#
+# Patient A:
+# earliest stable patient with high final confidence
+#
+# Patient B:
+# patient whose assignment changes relatively late
+#
+# =============================================================================
+
+EARLY_STABLE <- which(
+    STABLE_VISIT == min(
+        STABLE_VISIT
+    )
+)
+
+
+EXAMPLE_STABLE <- EARLY_STABLE[
+    which.max(
+        MARGIN_MATRIX[
+            EARLY_STABLE,
+            MAX_VISITS
+        ]
+    )
+]
+
+
+LATE_STABLE <- which(
+    STABLE_VISIT == max(
+        STABLE_VISIT
+    )
+)
+
+
+EXAMPLE_SWITCHING <- LATE_STABLE[
+    which.max(
+        MARGIN_MATRIX[
+            LATE_STABLE,
+            MAX_VISITS
+        ]
+    )
+]
+
+
+EXAMPLE_PATIENTS <- unique(
+    c(
+        EXAMPLE_STABLE,
+        EXAMPLE_SWITCHING
+    )
+)
+
+
+EXAMPLE_LABELS <- rep(
+    NA_character_,
+    N_TEST
+)
+
+
+EXAMPLE_LABELS[
+    EXAMPLE_STABLE
+] <- "Early-stable patient"
+
+
+EXAMPLE_LABELS[
+    EXAMPLE_SWITCHING
+] <- "Late-switching patient"
+
+
+cat("\nRepresentative patients:\n")
 
 cat(
-    sprintf(
-        "Log-rank chi-square = %.3f\n",
-        TRAIN_CHISQ
-    )
+    "Early-stable patient ID : ",
+    SURV_TEST$id[
+        EXAMPLE_STABLE
+    ],
+    "\n",
+    sep = ""
 )
+
 
 cat(
-    sprintf(
-        "p = %.8g\n",
-        TRAIN_P
-    )
+    "Late-switching patient ID: ",
+    SURV_TEST$id[
+        EXAMPLE_SWITCHING
+    ],
+    "\n",
+    sep = ""
 )
 
 
-cat("\nPROGRESSIVE ASSIGNMENT\n\n")
+# =============================================================================
+# PATIENT-SPECIFIC IMPORTANCE DATA
+# =============================================================================
+
+EXAMPLE_IMPORTANCE <- data.frame()
+
+
+for(i in EXAMPLE_PATIENTS) {
+
+    for(H in HORIZONS) {
+
+        for(j in seq_along(FEATURES)) {
+
+            tmp <- data.frame(
+
+                Patient =
+                    i,
+
+                PatientID =
+                    SURV_TEST$id[i],
+
+                Patient_type =
+                    EXAMPLE_LABELS[i],
+
+                Visit =
+                    H,
+
+                Feature =
+                    FEATURES[j],
+
+                Importance =
+                    as.numeric(
+                        IMP$patient[
+                            i,
+                            j,
+                            H
+                        ]
+                    ),
+
+                Cluster =
+                    PREDICTED_CLUSTER[
+                        i,
+                        H
+                    ],
+
+                Margin =
+                    MARGIN_MATRIX[
+                        i,
+                        H
+                    ],
+
+                stringsAsFactors = FALSE
+            )
+
+
+            EXAMPLE_IMPORTANCE <- rbind(
+                EXAMPLE_IMPORTANCE,
+                tmp
+            )
+        }
+    }
+}
+
+
+EXAMPLE_IMPORTANCE$Feature <- factor(
+
+    EXAMPLE_IMPORTANCE$Feature,
+
+    levels = FEATURES
+)
+
+
+# =============================================================================
+# FIGURE 5:
+# PATIENT-SPECIFIC EXPLANATION EVOLUTION
+# =============================================================================
+
+PLOT_PATIENT_IMPORTANCE <- ggplot(
+
+    EXAMPLE_IMPORTANCE,
+
+    aes(
+        x = Visit,
+        y = Importance,
+        colour = Feature,
+        group = Feature
+    )
+) +
+
+    geom_line(
+        linewidth = 1.1
+    ) +
+
+    geom_point(
+        size = 2.3
+    ) +
+
+    facet_wrap(
+
+        ~ Patient_type,
+
+        ncol = 1
+    ) +
+
+    scale_x_continuous(
+        breaks = HORIZONS
+    ) +
+
+    labs(
+
+        title =
+            "Patient-specific explanations evolve with longitudinal evidence",
+
+        subtitle =
+            "Example unseen patients with early-stable and late-changing cluster assignments",
+
+        x =
+            "Number of observed visits",
+
+        y =
+            "Normalized feature importance",
+
+        colour =
+            "Biomarker"
+    ) +
+
+    theme_classic(
+        base_size = 13
+    ) +
+
+    theme(
+
+        strip.text =
+            element_text(
+                face = "bold"
+            ),
+
+        legend.position =
+            "right"
+    )
+
 
 print(
-    PERFORMANCE,
+    PLOT_PATIENT_IMPORTANCE
+)
+
+
+# =============================================================================
+# FIGURE 6:
+# PATIENT-SPECIFIC PREDICTION TRAJECTORY
+# =============================================================================
+
+EXAMPLE_PREDICTIONS <- PREDICTION_LONG[
+    PREDICTION_LONG$Patient %in% EXAMPLE_PATIENTS,
+    ,
+    drop = FALSE
+]
+
+
+EXAMPLE_PREDICTIONS$Patient_type <- EXAMPLE_LABELS[
+    EXAMPLE_PREDICTIONS$Patient
+]
+
+
+EXAMPLE_PREDICTIONS$Cluster_label <- paste0(
+    "Cluster ",
+    EXAMPLE_PREDICTIONS$Cluster
+)
+
+
+PLOT_PATIENT_CONFIDENCE <- ggplot(
+
+    EXAMPLE_PREDICTIONS,
+
+    aes(
+        x = Visit,
+        y = Margin,
+        group = 1
+    )
+) +
+
+    geom_line(
+        linewidth = 1.2
+    ) +
+
+    geom_point(
+
+        aes(
+            shape = Cluster_label
+        ),
+
+        size = 4
+    ) +
+
+    geom_text(
+
+        aes(
+            label = paste0(
+                "C",
+                Cluster
+            )
+        ),
+
+        vjust = -1,
+
+        size = 4
+    ) +
+
+    facet_wrap(
+
+        ~ Patient_type,
+
+        ncol = 1,
+
+        scales = "free_y"
+    ) +
+
+    scale_x_continuous(
+        breaks = HORIZONS
+    ) +
+
+    labs(
+
+        title =
+            "Inductive patient trajectories reveal assignment uncertainty",
+
+        subtitle =
+            "Cluster identity and prediction margin as new visits become available",
+
+        x =
+            "Number of observed visits",
+
+        y =
+            "Prediction margin",
+
+        shape =
+            "Assigned cluster"
+    ) +
+
+    theme_classic(
+        base_size = 13
+    ) +
+
+    theme(
+
+        strip.text =
+            element_text(
+                face = "bold"
+            ),
+
+        legend.position =
+            "bottom"
+    )
+
+
+print(
+    PLOT_PATIENT_CONFIDENCE
+)
+
+
+# =============================================================================
+# ANALYSIS 6:
+# EXPLANATION CONVERGENCE FOR CORRECT VS CHANGING ASSIGNMENTS
+#
+# This asks whether an assignment that will eventually change also has
+# a less mature feature-importance explanation.
+# =============================================================================
+
+EXPLANATION_EARLY <- EXPLANATION_LONG[
+    EXPLANATION_LONG$Visit < MAX_VISITS,
+    ,
+    drop = FALSE
+]
+
+
+EXPLANATION_EARLY$Assignment_status <- ifelse(
+
+    EXPLANATION_EARLY$Correct_final == 1,
+
+    "Already final",
+
+    "Changes later"
+)
+
+
+EXPLANATION_EARLY$Assignment_status <- factor(
+
+    EXPLANATION_EARLY$Assignment_status,
+
+    levels = c(
+        "Changes later",
+        "Already final"
+    )
+)
+
+
+EXPLANATION_BY_STATUS <- aggregate(
+
+    Explanation_similarity ~ Visit + Assignment_status,
+
+    data = EXPLANATION_EARLY,
+
+    FUN = mean
+)
+
+
+cat("\n")
+cat("==============================================================================================================\n")
+cat("EXPLANATION MATURITY AND ASSIGNMENT STATUS\n")
+cat("==============================================================================================================\n\n")
+
+
+print(
+    EXPLANATION_BY_STATUS,
     digits = 3,
     row.names = FALSE
 )
 
 
-cat("\nFINAL TEST CLUSTERS\n\n")
+# =============================================================================
+# FIGURE 7:
+# EXPLANATION MATURITY: CORRECT VS CHANGING
+# =============================================================================
+
+PLOT_EXPLANATION_STATUS <- ggplot(
+
+    EXPLANATION_EARLY,
+
+    aes(
+        x = factor(Visit),
+        y = Explanation_similarity,
+        fill = Assignment_status
+    )
+) +
+
+    geom_boxplot(
+
+        width = 0.68,
+
+        outlier.shape = NA
+    ) +
+
+    geom_jitter(
+
+        width = 0.12,
+
+        alpha = 0.55,
+
+        size = 1.8
+    ) +
+
+    labs(
+
+        title =
+            "Stable early assignments have more mature explanations",
+
+        subtitle =
+            "Similarity to each patient's final five-visit feature-importance profile",
+
+        x =
+            "Number of observed visits",
+
+        y =
+            "Explanation similarity",
+
+        fill =
+            "Early assignment"
+    ) +
+
+    theme_classic(
+        base_size = 14
+    ) +
+
+    theme(
+
+        plot.title =
+            element_text(
+                face = "bold"
+            ),
+
+        legend.position =
+            "bottom"
+    )
+
+
+print(
+    PLOT_EXPLANATION_STATUS
+)
+
+
+# =============================================================================
+# SAVE TABLES
+# =============================================================================
+
+write.csv(
+
+    PREDICTION_LONG,
+
+    "PBC2_Inductive_Prediction_History.csv",
+
+    row.names = FALSE
+)
+
+
+write.csv(
+
+    CONFIDENCE_VISIT,
+
+    "PBC2_Inductive_Confidence_By_Visit.csv",
+
+    row.names = FALSE
+)
+
+
+write.csv(
+
+    EXPLANATION_LONG,
+
+    "PBC2_Explanation_Convergence_Patient.csv",
+
+    row.names = FALSE
+)
+
+
+write.csv(
+
+    EXPLANATION_SUMMARY,
+
+    "PBC2_Explanation_Convergence_Summary.csv",
+
+    row.names = FALSE
+)
+
+
+write.csv(
+
+    PATIENT_SUMMARY,
+
+    "PBC2_Inductive_Patient_Summary.csv",
+
+    row.names = FALSE
+)
+
+
+write.csv(
+
+    EXAMPLE_IMPORTANCE,
+
+    "PBC2_Representative_Patient_Importance.csv",
+
+    row.names = FALSE
+)
+
+
+# =============================================================================
+# SAVE FIGURES
+# =============================================================================
+
+ggsave(
+
+    "PBC2_Inductive_Figure1_Confidence_By_Visit.pdf",
+
+    PLOT_CONFIDENCE,
+
+    width = 7,
+
+    height = 5
+)
+
+
+ggsave(
+
+    "PBC2_Inductive_Figure2_Confidence_Reliability.pdf",
+
+    PLOT_CONFIDENCE_CORRECTNESS,
+
+    width = 7.5,
+
+    height = 5.5
+)
+
+
+ggsave(
+
+    "PBC2_Inductive_Figure3_Explanation_Convergence.pdf",
+
+    PLOT_EXPLANATION_CONVERGENCE,
+
+    width = 7,
+
+    height = 5
+)
+
+
+ggsave(
+
+    "PBC2_Inductive_Figure4_Confidence_Explanation.pdf",
+
+    PLOT_CONF_EXPL,
+
+    width = 7,
+
+    height = 5.5
+)
+
+
+ggsave(
+
+    "PBC2_Inductive_Figure5_Patient_Importance.pdf",
+
+    PLOT_PATIENT_IMPORTANCE,
+
+    width = 9,
+
+    height = 7
+)
+
+
+ggsave(
+
+    "PBC2_Inductive_Figure6_Patient_Confidence.pdf",
+
+    PLOT_PATIENT_CONFIDENCE,
+
+    width = 8,
+
+    height = 7
+)
+
+
+ggsave(
+
+    "PBC2_Inductive_Figure7_Explanation_Status.pdf",
+
+    PLOT_EXPLANATION_STATUS,
+
+    width = 7.5,
+
+    height = 5.5
+)
+
+
+# =============================================================================
+# FINAL CONSOLE SUMMARY
+# =============================================================================
+
+cat("\n\n")
+cat("==============================================================================================================\n")
+cat("INDUCTIVE longTAPIO SUMMARY\n")
+cat("==============================================================================================================\n\n")
+
+
+cat("FINAL TEST CLUSTERS\n\n")
 
 print(
     table(
@@ -2127,12 +2623,62 @@ print(
 )
 
 
-cat("\nFINAL BIOMARKER PROFILE\n\n")
+cat("\nMEAN PREDICTION MARGIN BY VISIT\n\n")
 
 print(
-    FINAL_PROFILE,
+    CONFIDENCE_VISIT,
     digits = 3,
     row.names = FALSE
+)
+
+
+cat("\nMEAN EXPLANATION CONVERGENCE BY VISIT\n\n")
+
+print(
+    EXPLANATION_SUMMARY,
+    digits = 3,
+    row.names = FALSE
+)
+
+
+cat("\nCONFIDENCE VS EXPLANATION CONVERGENCE\n\n")
+
+cat(
+    sprintf(
+        "Spearman rho = %.3f\n",
+        COR_CONF_EXPL
+    )
+)
+
+
+cat("\nTIME TO STABLE ASSIGNMENT\n\n")
+
+print(
+    table(
+        PATIENT_SUMMARY$Stable_from_visit
+    )
+)
+
+
+cat("\nREPRESENTATIVE PATIENTS\n\n")
+
+cat(
+    "Early-stable patient ID  : ",
+    SURV_TEST$id[
+        EXAMPLE_STABLE
+    ],
+    "\n",
+    sep = ""
+)
+
+
+cat(
+    "Late-switching patient ID : ",
+    SURV_TEST$id[
+        EXAMPLE_SWITCHING
+    ],
+    "\n",
+    sep = ""
 )
 
 

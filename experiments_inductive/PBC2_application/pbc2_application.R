@@ -1,13 +1,13 @@
 # =============================================================================
 # PBC2 - K = 2 INDUCTIVE longTAPIO
 #
-# COMPLETE FINAL ANALYSIS
+# COMPLETE ANALYSIS
 #
 # FIGURE 1:
-#   Progressive assignment ARI across visits
+#   Kaplan-Meier curves of TRAINING clusters
 #
 # FIGURE 2:
-#   Kaplan-Meier curves of TRAINING clusters using survminer
+#   Progressive assignment stability (ARI)
 #
 # FIGURE 3:
 #   Overall feature-importance evolution
@@ -16,8 +16,14 @@
 #   Cluster-specific feature-importance evolution
 #
 # FIGURE 5:
-#   Actual biomarker trajectories by cluster
-#   -> shows DIRECTION: higher/lower biomarker values in each cluster
+#   Standardized biomarker trajectories by cluster
+#
+# FIGURE 6:
+#   Biomarker separation heatmap
+#   Higher-risk minus lower-risk trajectory
+#
+# FIGURE 7:
+#   Time to stable cluster assignment
 #
 # =============================================================================
 
@@ -59,7 +65,7 @@ TRAIN_FRACTION <- 0.70
 
 MAX_VISITS <- 5
 
-HORIZONS <- 1:MAX_VISITS
+HORIZONS <- seq_len(MAX_VISITS)
 
 N_TREES <- 500
 
@@ -140,7 +146,10 @@ print(
 # 1 = transplantation
 # 2 = death
 #
-# We perform death-specific survival analysis.
+# For the present cause-specific death analysis:
+#
+# death = 1 only when event == 2.
+#
 # Transplantation is treated as censoring.
 #
 # =============================================================================
@@ -200,12 +209,32 @@ extract_patient_survival <- function(dat) {
 
 
         if(length(survival_values) != 1) {
-            stop("Non-unique survival time.")
+            stop(
+                paste0(
+                    "Non-unique survival time for patient ",
+                    ids[i]
+                )
+            )
         }
 
 
         if(length(death_values) != 1) {
-            stop("Non-unique death endpoint.")
+            stop(
+                paste0(
+                    "Non-unique death endpoint for patient ",
+                    ids[i]
+                )
+            )
+        }
+
+
+        if(length(original_values) != 1) {
+            stop(
+                paste0(
+                    "Non-unique original endpoint for patient ",
+                    ids[i]
+                )
+            )
         }
 
 
@@ -255,7 +284,7 @@ SURVIVAL_DATA <- extract_patient_survival(
 
 
 # =============================================================================
-# 6. PREPARE LONGITUDINAL DATA
+# 6. PREPARE LONGITUDINAL COHORT
 # =============================================================================
 
 prepare_pbc2 <- function(
@@ -275,6 +304,10 @@ prepare_pbc2 <- function(
     ]
 
 
+    # -------------------------------------------------------------------------
+    # Complete biomarker rows
+    # -------------------------------------------------------------------------
+
     complete_rows <- complete.cases(
         dat[
             ,
@@ -290,6 +323,10 @@ prepare_pbc2 <- function(
         drop = FALSE
     ]
 
+
+    # -------------------------------------------------------------------------
+    # Require at least MAX_VISITS
+    # -------------------------------------------------------------------------
 
     visit_counts <- table(
         dat_complete$id
@@ -320,6 +357,10 @@ prepare_pbc2 <- function(
     ]
 
 
+    # -------------------------------------------------------------------------
+    # First MAX_VISITS complete observations
+    # -------------------------------------------------------------------------
+
     patient_list <- split(
         dat_complete,
         dat_complete$id
@@ -331,7 +372,9 @@ prepare_pbc2 <- function(
         function(d) {
 
             d <- d[
-                order(d$time),
+                order(
+                    d$time
+                ),
                 ,
                 drop = FALSE
             ]
@@ -388,6 +431,10 @@ prepare_pbc2 <- function(
     ]
 
 
+    # -------------------------------------------------------------------------
+    # Patient-level survival
+    # -------------------------------------------------------------------------
+
     survival_final <- survival_data[
         match(
             patients,
@@ -402,6 +449,10 @@ prepare_pbc2 <- function(
         nrow(survival_final)
     )
 
+
+    # -------------------------------------------------------------------------
+    # Fifth-visit landmark
+    # -------------------------------------------------------------------------
 
     landmark_time <- tapply(
         dat_final$time,
@@ -433,6 +484,14 @@ prepare_pbc2 <- function(
 
 
     if(any(!valid)) {
+
+        cat(
+            "\nRemoving ",
+            sum(!valid),
+            " patients with endpoint before landmark.\n",
+            sep = ""
+        )
+
 
         keep_ids <- survival_final$id[
             valid
@@ -527,6 +586,7 @@ cat(
     sep = ""
 )
 
+
 cat(
     "Deaths   : ",
     sum(PATIENT_DATA$event),
@@ -536,7 +596,7 @@ cat(
 
 
 # =============================================================================
-# 7. CREATE PATIENT x VISIT x FEATURE ARRAY
+# 7. PATIENT x VISIT x FEATURE ARRAY
 # =============================================================================
 
 pbc2_to_array <- function(
@@ -606,6 +666,11 @@ pbc2_to_array <- function(
     }
 
 
+    if(any(!is.finite(X))) {
+        stop("Non-finite values detected in longitudinal array.")
+    }
+
+
     return(
         X
     )
@@ -623,22 +688,18 @@ X_RAW <- pbc2_to_array(
 
 
 # =============================================================================
-# IMPORTANT:
+# 8. MODEL INPUT
+# =============================================================================
 #
-# X_RAW contains ORIGINAL biomarker values.
+# Preserve raw values separately.
 #
-# We retain this because Figure 5 should show actual biomarker direction,
-# not transformed/scaled values.
+# X_RAW = actual biomarker values
+# X     = transformed values used by longTAPIO
 #
 # =============================================================================
-
 
 X <- X_RAW
 
-
-# =============================================================================
-# 8. LOG TRANSFORM MODEL INPUT
-# =============================================================================
 
 for(feature_name in LOG_FEATURES) {
 
@@ -648,9 +709,12 @@ for(feature_name in LOG_FEATURES) {
     )
 
 
-    X[, , j] <- log1p(
-        X[, , j]
-    )
+    if(!is.na(j)) {
+
+        X[, , j] <- log1p(
+            X[, , j]
+        )
+    }
 }
 
 
@@ -720,7 +784,9 @@ make_split <- function(
     seed
 ) {
 
-    set.seed(seed)
+    set.seed(
+        seed
+    )
 
 
     train_idx <- integer(0)
@@ -739,13 +805,16 @@ make_split <- function(
         )
 
 
+        selected <- sample(
+            ids,
+            size = n_train,
+            replace = FALSE
+        )
+
+
         train_idx <- c(
             train_idx,
-            sample(
-                ids,
-                size = n_train,
-                replace = FALSE
-            )
+            selected
         )
     }
 
@@ -850,6 +919,7 @@ cat(
     sep = ""
 )
 
+
 cat(
     "Test patients     : ",
     nrow(SURV_TEST),
@@ -857,12 +927,14 @@ cat(
     sep = ""
 )
 
+
 cat(
     "Training deaths   : ",
     sum(SURV_TRAIN$event),
     "\n",
     sep = ""
 )
+
 
 cat(
     "Test deaths       : ",
@@ -873,7 +945,7 @@ cat(
 
 
 # =============================================================================
-# 11. FIT longTAPIO
+# 11. FIT K=2 longTAPIO
 # =============================================================================
 
 N_FEATURES_TREE <- max(
@@ -936,7 +1008,7 @@ print(
 
 
 # =============================================================================
-# 12. DEFINE RISK LABELS FROM TRAINING SURVIVAL
+# 12. SURVIVAL CHARACTERIZATION
 # =============================================================================
 
 TRAIN_SURVIVAL <- data.frame(
@@ -999,6 +1071,28 @@ TRAIN_SURVIVAL$risk_group <- factor(
 )
 
 
+cat("\nTraining survival groups:\n")
+
+print(
+    table(
+        TRAIN_SURVIVAL$risk_group
+    )
+)
+
+
+cat("\nDeaths by survival group:\n")
+
+print(
+    with(
+        TRAIN_SURVIVAL,
+        table(
+            risk_group,
+            event
+        )
+    )
+)
+
+
 # =============================================================================
 # 13. KAPLAN-MEIER
 # =============================================================================
@@ -1030,13 +1124,46 @@ TRAIN_CHISQ <- as.numeric(
 )
 
 
+TRAIN_DF <- length(
+    LOGRANK_TRAIN$n
+) - 1L
+
+
 TRAIN_P <- pchisq(
 
     TRAIN_CHISQ,
 
-    df = 1,
+    df = TRAIN_DF,
 
     lower.tail = FALSE
+)
+
+
+cat("\nTRAINING SURVIVAL DIFFERENCE\n")
+cat("----------------------------------------\n")
+
+
+cat(
+    sprintf(
+        "Log-rank chi-square = %.3f\n",
+        TRAIN_CHISQ
+    )
+)
+
+
+cat(
+    sprintf(
+        "df                  = %d\n",
+        TRAIN_DF
+    )
+)
+
+
+cat(
+    sprintf(
+        "p                   = %.8g\n",
+        TRAIN_P
+    )
 )
 
 
@@ -1126,7 +1253,7 @@ print(
 
 
 # =============================================================================
-# 14. PROGRESSIVE TEST ASSIGNMENT + IMPORTANCE
+# 14. INDUCTIVE TEST ASSIGNMENT + IMPORTANCE
 # =============================================================================
 
 IMP <- importance_longTAPIO_inductive(
@@ -1146,8 +1273,17 @@ FINAL_CLUSTER <- as.integer(
 )
 
 
+cat("\nFinal test clusters:\n")
+
+print(
+    table(
+        FINAL_CLUSTER
+    )
+)
+
+
 # =============================================================================
-# 15. PROGRESSIVE ARI
+# 15. PROGRESSIVE ASSIGNMENT PERFORMANCE
 # =============================================================================
 
 ARI_VALUES <- numeric(
@@ -1207,6 +1343,15 @@ PERFORMANCE <- data.frame(
 )
 
 
+cat("\nProgressive assignment:\n\n")
+
+print(
+    PERFORMANCE,
+    digits = 3,
+    row.names = FALSE
+)
+
+
 # =============================================================================
 # FIGURE 2
 # PROGRESSIVE ARI
@@ -1252,6 +1397,11 @@ PLOT_ARI <- ggplot(
         limits = c(
             0,
             1.08
+        ),
+        breaks = seq(
+            0,
+            1,
+            0.2
         )
     ) +
 
@@ -1261,7 +1411,7 @@ PLOT_ARI <- ggplot(
             "Progressive trajectory-cluster assignment",
 
         subtitle =
-            "Agreement with final five-visit assignment",
+            "Agreement with final five-visit assignment in unseen patients",
 
         x =
             "Number of observed visits",
@@ -1281,7 +1431,7 @@ print(
 
 
 # =============================================================================
-# 16. PATIENT-LEVEL FEATURE IMPORTANCE
+# 16. PATIENT-LEVEL IMPORTANCE DATA
 # =============================================================================
 
 IMPORTANCE_LIST <- list()
@@ -1299,6 +1449,9 @@ for(H in HORIZONS) {
                 seq_along(
                     FINAL_CLUSTER
                 ),
+
+            PatientID =
+                SURV_TEST$id,
 
             Visit =
                 H,
@@ -1334,6 +1487,14 @@ IMPORTANCE_PATIENT <- do.call(
 )
 
 
+IMPORTANCE_PATIENT$Feature <- factor(
+
+    IMPORTANCE_PATIENT$Feature,
+
+    levels = FEATURES
+)
+
+
 IMPORTANCE_PATIENT$Risk_group <- factor(
 
     IMPORTANCE_PATIENT$Risk_group,
@@ -1346,7 +1507,7 @@ IMPORTANCE_PATIENT$Risk_group <- factor(
 
 
 # =============================================================================
-# 17. OVERALL IMPORTANCE
+# 17. OVERALL FEATURE IMPORTANCE
 # =============================================================================
 
 OVERALL_IMPORTANCE <- aggregate(
@@ -1361,7 +1522,7 @@ OVERALL_IMPORTANCE <- aggregate(
 
 # =============================================================================
 # FIGURE 3
-# OVERALL IMPORTANCE EVOLUTION
+# OVERALL FEATURE IMPORTANCE
 # =============================================================================
 
 PLOT_IMPORTANCE <- ggplot(
@@ -1414,7 +1575,7 @@ print(
 
 
 # =============================================================================
-# 18. CLUSTER-SPECIFIC IMPORTANCE
+# 18. CLUSTER-SPECIFIC FEATURE IMPORTANCE
 # =============================================================================
 
 CLUSTER_IMPORTANCE <- aggregate(
@@ -1490,7 +1651,10 @@ PLOT_CLUSTER_IMPORTANCE <- ggplot(
         strip.text =
             element_text(
                 face = "bold"
-            )
+            ),
+
+        legend.position =
+            "right"
     )
 
 
@@ -1500,31 +1664,15 @@ print(
 
 
 # =============================================================================
-# 19. NEW ANALYSIS
-#
-# ACTUAL BIOMARKER VALUES BY CLUSTER
-#
-# This answers:
-#
-# "Which biomarkers are HIGHER or LOWER in each cluster?"
+# 19. STANDARDIZE ACTUAL BIOMARKER VALUES
 #
 # IMPORTANT:
 #
-# We use RAW biomarker values here, not importance scores.
+# Standardization parameters come ONLY from training patients.
 #
-# To make biomarkers comparable in ONE figure, each biomarker is
-# standardized using TRAINING-set mean and SD.
+# z > 0 = above training population mean
+# z < 0 = below training population mean
 #
-# Thus:
-#
-#   z > 0 = above training population mean
-#   z < 0 = below training population mean
-#
-# =============================================================================
-
-
-# =============================================================================
-# 20. TRAINING-BASED STANDARDIZATION
 # =============================================================================
 
 P <- length(
@@ -1571,10 +1719,6 @@ for(j in seq_len(P)) {
 }
 
 
-# =============================================================================
-# 21. STANDARDIZE RAW TEST BIOMARKERS
-# =============================================================================
-
 X_Z_TEST <- X_RAW_TEST
 
 
@@ -1589,7 +1733,7 @@ for(j in seq_len(P)) {
 
 
 # =============================================================================
-# 22. LONG DATA FRAME OF STANDARDIZED BIOMARKER VALUES
+# 20. LONG-FORM BIOMARKER DATA
 # =============================================================================
 
 BIOMARKER_LONG_LIST <- list()
@@ -1667,7 +1811,7 @@ BIOMARKER_LONG$Risk_group <- factor(
 
 
 # =============================================================================
-# 23. MEAN BIOMARKER TRAJECTORY BY CLUSTER
+# 21. MEAN BIOMARKER TRAJECTORIES
 # =============================================================================
 
 BIOMARKER_CLUSTER_MEAN <- aggregate(
@@ -1701,7 +1845,7 @@ BIOMARKER_CLUSTER_MEAN$Risk_group <- factor(
 
 cat("\n")
 cat("==============================================================================================================\n")
-cat("STANDARDIZED BIOMARKER VALUES BY CLUSTER\n")
+cat("STANDARDIZED BIOMARKER TRAJECTORIES\n")
 cat("==============================================================================================================\n\n")
 
 
@@ -1714,22 +1858,7 @@ print(
 
 # =============================================================================
 # FIGURE 5
-#
-# THE NEW IMPORTANT FIGURE:
-#
-# ACTUAL BIOMARKER TRAJECTORIES BY CLUSTER
-#
-# Each panel = one biomarker
-#
-# Two lines:
-#
-#   lower-risk trajectory
-#   higher-risk trajectory
-#
-# y-axis = standardized biomarker value
-#
-# 0 = overall training mean
-#
+# BIOMARKER TRAJECTORIES BY CLUSTER
 # =============================================================================
 
 PLOT_BIOMARKER_TRAJECTORIES <- ggplot(
@@ -1765,13 +1894,23 @@ PLOT_BIOMARKER_TRAJECTORIES <- ggplot(
 
         ~ Feature,
 
-        ncol = 3#,
-
-        #scales = "free_y"
+        ncol = 3
     ) +
 
     scale_x_continuous(
         breaks = HORIZONS
+    ) +
+
+    scale_y_continuous(
+        limits = c(
+            -1.6,
+            1.6
+        ),
+        breaks = seq(
+            -1.5,
+            1.5,
+            0.5
+        )
     ) +
 
     labs(
@@ -1780,7 +1919,7 @@ PLOT_BIOMARKER_TRAJECTORIES <- ggplot(
             "Biomarker trajectories characterizing the two clusters",
 
         subtitle =
-            "Values standardized relative to the training population",
+            "Standardized relative to the training population",
 
         x =
             "Visit",
@@ -1800,28 +1939,16 @@ PLOT_BIOMARKER_TRAJECTORIES <- ggplot(
 
         plot.title =
             element_text(
-                face = "bold",
-                size = 16
-            ),
-
-        plot.subtitle =
-            element_text(
-                size = 11
+                face = "bold"
             ),
 
         strip.text =
             element_text(
-                face = "bold",
-                size = 11
+                face = "bold"
             ),
 
         legend.position =
-            "bottom",
-
-        legend.title =
-            element_text(
-                face = "bold"
-            )
+            "bottom"
     )
 
 
@@ -1831,13 +1958,474 @@ print(
 
 
 # =============================================================================
-# 24. OPTIONAL:
+# 22. NEW:
+# BIOMARKER SEPARATION BETWEEN CLUSTERS
 #
-# FINAL VISIT BIOMARKER PROFILE
+# Delta = mean z-score in higher-risk cluster
+#         minus
+#         mean z-score in lower-risk cluster
 #
-# This is useful because it gives a compact direct comparison of the
-# two clusters at visit 5.
+# Therefore:
 #
+# Delta > 0:
+# biomarker is HIGHER in higher-risk patients
+#
+# Delta < 0:
+# biomarker is LOWER in higher-risk patients
+#
+# =============================================================================
+
+HIGH_PROFILE <- BIOMARKER_CLUSTER_MEAN[
+    BIOMARKER_CLUSTER_MEAN$Risk_group == "Higher-risk trajectory",
+    c(
+        "Visit",
+        "Feature",
+        "Z_value"
+    )
+]
+
+
+LOW_PROFILE <- BIOMARKER_CLUSTER_MEAN[
+    BIOMARKER_CLUSTER_MEAN$Risk_group == "Lower-risk trajectory",
+    c(
+        "Visit",
+        "Feature",
+        "Z_value"
+    )
+]
+
+
+names(HIGH_PROFILE)[3] <- "Higher_risk_Z"
+
+names(LOW_PROFILE)[3] <- "Lower_risk_Z"
+
+
+BIOMARKER_SEPARATION <- merge(
+
+    HIGH_PROFILE,
+
+    LOW_PROFILE,
+
+    by = c(
+        "Visit",
+        "Feature"
+    )
+)
+
+
+BIOMARKER_SEPARATION$Delta_Z <-
+    BIOMARKER_SEPARATION$Higher_risk_Z -
+    BIOMARKER_SEPARATION$Lower_risk_Z
+
+
+BIOMARKER_SEPARATION$Feature <- factor(
+
+    BIOMARKER_SEPARATION$Feature,
+
+    levels = rev(
+        FEATURES
+    )
+)
+
+
+BIOMARKER_SEPARATION <- BIOMARKER_SEPARATION[
+    order(
+        BIOMARKER_SEPARATION$Feature,
+        BIOMARKER_SEPARATION$Visit
+    ),
+    ,
+    drop = FALSE
+]
+
+
+cat("\n")
+cat("==============================================================================================================\n")
+cat("BIOMARKER SEPARATION: HIGHER-RISK MINUS LOWER-RISK\n")
+cat("==============================================================================================================\n\n")
+
+
+print(
+    BIOMARKER_SEPARATION,
+    digits = 3,
+    row.names = FALSE
+)
+
+
+# =============================================================================
+# FIGURE 6
+# BIOMARKER SEPARATION HEATMAP
+# =============================================================================
+
+PLOT_SEPARATION <- ggplot(
+
+    BIOMARKER_SEPARATION,
+
+    aes(
+        x = factor(Visit),
+        y = Feature,
+        fill = Delta_Z
+    )
+) +
+
+    geom_tile(
+        linewidth = 0.7
+    ) +
+
+    geom_text(
+
+        aes(
+            label = sprintf(
+                "%.2f",
+                Delta_Z
+            )
+        ),
+
+        size = 3.8
+    ) +
+
+    scale_fill_gradient2(
+
+        midpoint = 0,
+
+        name =
+            "Difference\nin z-score"
+    ) +
+
+    labs(
+
+        title =
+            "Emergence of biomarker differences between trajectory clusters",
+
+        subtitle =
+            "Higher-risk minus lower-risk trajectory",
+
+        x =
+            "Visit",
+
+        y =
+            NULL
+    ) +
+
+    theme_classic(
+        base_size = 13
+    ) +
+
+    theme(
+
+        plot.title =
+            element_text(
+                face = "bold"
+            ),
+
+        axis.text.y =
+            element_text(
+                face = "bold"
+            ),
+
+        legend.title =
+            element_text(
+                face = "bold"
+            )
+    )
+
+
+print(
+    PLOT_SEPARATION
+)
+
+
+# =============================================================================
+# 23. NEW:
+# TIME TO STABLE CLUSTER ASSIGNMENT
+#
+# Definition:
+#
+# Earliest visit H such that the patient's assignment at H and ALL
+# subsequent visits equals the final visit-5 assignment.
+#
+# Example:
+#
+# 2 2 2 2 2 -> stable at visit 1
+#
+# 1 2 2 2 2 -> stable at visit 2
+#
+# 2 2 1 1 1 -> stable at visit 3
+#
+# 2 2 2 2 1 -> stable at visit 5
+#
+# =============================================================================
+
+PREDICTION_MATRIX <- as.matrix(
+    IMP$predicted_cluster[
+        ,
+        HORIZONS,
+        drop = FALSE
+    ]
+)
+
+
+STABLE_VISIT <- integer(
+    nrow(
+        PREDICTION_MATRIX
+    )
+)
+
+
+for(i in seq_len(nrow(PREDICTION_MATRIX))) {
+
+    final_i <- PREDICTION_MATRIX[
+        i,
+        MAX_VISITS
+    ]
+
+
+    stable_i <- MAX_VISITS
+
+
+    for(H in HORIZONS) {
+
+        subsequent_assignments <- PREDICTION_MATRIX[
+            i,
+            H:MAX_VISITS
+        ]
+
+
+        if(
+            all(
+                subsequent_assignments ==
+                    final_i
+            )
+        ) {
+
+            stable_i <- H
+
+            break
+        }
+    }
+
+
+    STABLE_VISIT[i] <- stable_i
+}
+
+
+STABILITY_PATIENT <- data.frame(
+
+    PatientID =
+        SURV_TEST$id,
+
+    Final_cluster =
+        FINAL_CLUSTER,
+
+    Risk_group =
+        risk_label(
+            FINAL_CLUSTER
+        ),
+
+    Stable_from_visit =
+        STABLE_VISIT,
+
+    stringsAsFactors = FALSE
+)
+
+
+STABILITY_PATIENT$Risk_group <- factor(
+
+    STABILITY_PATIENT$Risk_group,
+
+    levels = c(
+        "Lower-risk trajectory",
+        "Higher-risk trajectory"
+    )
+)
+
+
+cat("\n")
+cat("==============================================================================================================\n")
+cat("TIME TO STABLE ASSIGNMENT\n")
+cat("==============================================================================================================\n\n")
+
+
+print(
+    table(
+        STABILITY_PATIENT$Stable_from_visit
+    )
+)
+
+
+# =============================================================================
+# 24. CUMULATIVE STABILIZATION
+# =============================================================================
+
+STABILITY_SUMMARY <- data.frame(
+
+    Visit =
+        HORIZONS,
+
+    N_stable =
+        NA_integer_,
+
+    Proportion_stable =
+        NA_real_
+)
+
+
+for(H in HORIZONS) {
+
+    STABILITY_SUMMARY$N_stable[
+        STABILITY_SUMMARY$Visit == H
+    ] <- sum(
+        STABLE_VISIT <= H
+    )
+
+
+    STABILITY_SUMMARY$Proportion_stable[
+        STABILITY_SUMMARY$Visit == H
+    ] <- mean(
+        STABLE_VISIT <= H
+    )
+}
+
+
+cat("\nCumulative stabilization:\n\n")
+
+
+print(
+    STABILITY_SUMMARY,
+    digits = 3,
+    row.names = FALSE
+)
+
+
+# =============================================================================
+# FIGURE 7
+# CUMULATIVE PROPORTION WITH STABLE ASSIGNMENT
+# =============================================================================
+
+PLOT_STABILITY <- ggplot(
+
+    STABILITY_SUMMARY,
+
+    aes(
+        x = Visit,
+        y = Proportion_stable
+    )
+) +
+
+    geom_line(
+        linewidth = 1.3
+    ) +
+
+    geom_point(
+        size = 3.5
+    ) +
+
+    geom_text(
+
+        aes(
+            label = paste0(
+                round(
+                    100 *
+                        Proportion_stable,
+                    1
+                ),
+                "%"
+            )
+        ),
+
+        vjust = -1,
+
+        size = 4
+    ) +
+
+    scale_x_continuous(
+        breaks = HORIZONS
+    ) +
+
+    scale_y_continuous(
+
+        limits = c(
+            0,
+            1.08
+        ),
+
+        breaks = seq(
+            0,
+            1,
+            0.2
+        ),
+
+        labels = function(x) {
+            paste0(
+                round(
+                    x * 100
+                ),
+                "%"
+            )
+        }
+    ) +
+
+    labs(
+
+        title =
+            "Time to stable trajectory-cluster assignment",
+
+        subtitle =
+            "Earliest visit after which assignment remains unchanged",
+
+        x =
+            "Visit",
+
+        y =
+            "Patients with stable assignment"
+    ) +
+
+    theme_classic(
+        base_size = 14
+    ) +
+
+    theme(
+
+        plot.title =
+            element_text(
+                face = "bold"
+            )
+    )
+
+
+print(
+    PLOT_STABILITY
+)
+
+
+# =============================================================================
+# 25. STABILITY BY FINAL CLUSTER
+# =============================================================================
+
+STABILITY_CLUSTER <- aggregate(
+
+    Stable_from_visit ~ Risk_group,
+
+    data = STABILITY_PATIENT,
+
+    FUN = function(x) {
+
+        c(
+            Mean = mean(x),
+            Median = median(x)
+        )
+    }
+)
+
+
+cat("\nStability by final cluster:\n\n")
+
+print(
+    STABILITY_CLUSTER
+)
+
+
+# =============================================================================
+# 26. FINAL VISIT BIOMARKER PROFILE
 # =============================================================================
 
 FINAL_PROFILE <- BIOMARKER_CLUSTER_MEAN[
@@ -1918,70 +2506,263 @@ print(
 
 
 # =============================================================================
-# 25. SAVE TABLES
+# 27. TEST SURVIVAL ANALYSIS
+#
+# This provides independent descriptive validation of the survival
+# association in inductively assigned patients.
+#
+# Risk labels were determined from TRAINING survival only.
+# =============================================================================
+
+TEST_SURVIVAL <- data.frame(
+
+    time =
+        SURV_TEST$residual_survival,
+
+    event =
+        SURV_TEST$event,
+
+    cluster =
+        FINAL_CLUSTER,
+
+    risk_group =
+        factor(
+            risk_label(
+                FINAL_CLUSTER
+            ),
+            levels = c(
+                "Lower-risk trajectory",
+                "Higher-risk trajectory"
+            )
+        )
+)
+
+
+KM_TEST <- survival::survfit(
+
+    survival::Surv(
+        time,
+        event
+    ) ~ risk_group,
+
+    data = TEST_SURVIVAL
+)
+
+
+LOGRANK_TEST <- survival::survdiff(
+
+    survival::Surv(
+        time,
+        event
+    ) ~ risk_group,
+
+    data = TEST_SURVIVAL
+)
+
+
+TEST_CHISQ <- as.numeric(
+    LOGRANK_TEST$chisq
+)
+
+
+TEST_DF <- length(
+    LOGRANK_TEST$n
+) - 1L
+
+
+TEST_P <- pchisq(
+
+    TEST_CHISQ,
+
+    df = TEST_DF,
+
+    lower.tail = FALSE
+)
+
+
+cat("\n")
+cat("==============================================================================================================\n")
+cat("TEST SURVIVAL VALIDATION\n")
+cat("==============================================================================================================\n\n")
+
+
+cat(
+    sprintf(
+        "Log-rank chi-square = %.3f\n",
+        TEST_CHISQ
+    )
+)
+
+
+cat(
+    sprintf(
+        "p                   = %.8g\n",
+        TEST_P
+    )
+)
+
+
+cat("\nDeaths by test cluster:\n")
+
+
+print(
+    with(
+        TEST_SURVIVAL,
+        table(
+            risk_group,
+            event
+        )
+    )
+)
+
+
+# =============================================================================
+# OPTIONAL TEST KM FIGURE
+# =============================================================================
+
+PLOT_KM_TEST <- survminer::ggsurvplot(
+
+    fit =
+        KM_TEST,
+
+    data =
+        TEST_SURVIVAL,
+
+    pval =
+        TRUE,
+
+    pval.method =
+        TRUE,
+
+    conf.int =
+        TRUE,
+
+    risk.table =
+        TRUE,
+
+    risk.table.height =
+        0.25,
+
+    risk.table.y.text =
+        FALSE,
+
+    risk.table.col =
+        "strata",
+
+    censor =
+        TRUE,
+
+    censor.shape =
+        124,
+
+    censor.size =
+        3,
+
+    xlab =
+        "Years after fifth-visit landmark",
+
+    ylab =
+        "Survival probability",
+
+    break.time.by =
+        1,
+
+    surv.scale =
+        "percent",
+
+    legend.title =
+        "Trajectory cluster",
+
+    legend.labs =
+        c(
+            "Lower-risk trajectory",
+            "Higher-risk trajectory"
+        ),
+
+    legend =
+        "bottom",
+
+    size =
+        1.2,
+
+    ggtheme =
+        theme_classic(
+            base_size = 14
+        ),
+
+    title =
+        "Survival of inductively assigned test patients"
+)
+
+
+print(
+    PLOT_KM_TEST
+)
+
+
+# =============================================================================
+# 28. SAVE TABLES
 # =============================================================================
 
 write.csv(
-
     PERFORMANCE,
-
-    "PBC2_K2_progressive_ARI.csv",
-
+    "PBC2_K2_progressive_assignment.csv",
     row.names = FALSE
 )
 
 
 write.csv(
-
     OVERALL_IMPORTANCE,
-
     "PBC2_K2_overall_importance.csv",
-
     row.names = FALSE
 )
 
 
 write.csv(
-
     CLUSTER_IMPORTANCE,
-
     "PBC2_K2_cluster_specific_importance.csv",
-
     row.names = FALSE
 )
 
 
 write.csv(
-
     BIOMARKER_CLUSTER_MEAN,
-
-    "PBC2_K2_cluster_biomarker_trajectories.csv",
-
+    "PBC2_K2_biomarker_trajectories.csv",
     row.names = FALSE
 )
 
 
 write.csv(
+    BIOMARKER_SEPARATION,
+    "PBC2_K2_biomarker_separation.csv",
+    row.names = FALSE
+)
 
-    FINAL_PROFILE,
 
-    "PBC2_K2_final_biomarker_profile.csv",
+write.csv(
+    STABILITY_PATIENT,
+    "PBC2_K2_patient_stability.csv",
+    row.names = FALSE
+)
 
+
+write.csv(
+    STABILITY_SUMMARY,
+    "PBC2_K2_stability_summary.csv",
     row.names = FALSE
 )
 
 
 # =============================================================================
-# 26. SAVE FIGURES
+# 29. SAVE FIGURES
 # =============================================================================
-
 
 # -----------------------------------------------------------------------------
-# KM including risk table
+# Training KM including risk table
 # -----------------------------------------------------------------------------
 
 pdf(
-    "PBC2_Figure1_KaplanMeier.pdf",
+    "PBC2_Figure1_Training_KM.pdf",
     width = 7.5,
     height = 7
 )
@@ -1994,7 +2775,7 @@ dev.off()
 
 
 # -----------------------------------------------------------------------------
-# ARI
+# Progressive ARI
 # -----------------------------------------------------------------------------
 
 ggsave(
@@ -2058,7 +2839,39 @@ ggsave(
 
 
 # -----------------------------------------------------------------------------
-# Final biomarker profile
+# Biomarker separation heatmap
+# -----------------------------------------------------------------------------
+
+ggsave(
+
+    "PBC2_Figure6_Biomarker_Separation_Heatmap.pdf",
+
+    PLOT_SEPARATION,
+
+    width = 7.5,
+
+    height = 5.5
+)
+
+
+# -----------------------------------------------------------------------------
+# Stable assignment
+# -----------------------------------------------------------------------------
+
+ggsave(
+
+    "PBC2_Figure7_Assignment_Stability.pdf",
+
+    PLOT_STABILITY,
+
+    width = 6.5,
+
+    height = 5
+)
+
+
+# -----------------------------------------------------------------------------
+# Final profile - supplementary
 # -----------------------------------------------------------------------------
 
 ggsave(
@@ -2073,8 +2886,25 @@ ggsave(
 )
 
 
+# -----------------------------------------------------------------------------
+# Test KM - validation
+# -----------------------------------------------------------------------------
+
+pdf(
+    "PBC2_Supplement_Test_KM.pdf",
+    width = 7.5,
+    height = 7
+)
+
+print(
+    PLOT_KM_TEST
+)
+
+dev.off()
+
+
 # =============================================================================
-# 27. FINAL SUMMARY
+# 30. FINAL SUMMARY
 # =============================================================================
 
 cat("\n\n")
@@ -2101,10 +2931,29 @@ cat(
     )
 )
 
+
 cat(
     sprintf(
         "p = %.8g\n",
         TRAIN_P
+    )
+)
+
+
+cat("\nTEST SURVIVAL\n")
+
+cat(
+    sprintf(
+        "Log-rank chi-square = %.3f\n",
+        TEST_CHISQ
+    )
+)
+
+
+cat(
+    sprintf(
+        "p = %.8g\n",
+        TEST_P
     )
 )
 
@@ -2118,19 +2967,19 @@ print(
 )
 
 
-cat("\nFINAL TEST CLUSTERS\n\n")
+cat("\nTIME TO STABLE ASSIGNMENT\n\n")
 
 print(
-    table(
-        FINAL_CLUSTER
-    )
+    STABILITY_SUMMARY,
+    digits = 3,
+    row.names = FALSE
 )
 
 
-cat("\nFINAL BIOMARKER PROFILE\n\n")
+cat("\nBIOMARKER SEPARATION\n\n")
 
 print(
-    FINAL_PROFILE,
+    BIOMARKER_SEPARATION,
     digits = 3,
     row.names = FALSE
 )

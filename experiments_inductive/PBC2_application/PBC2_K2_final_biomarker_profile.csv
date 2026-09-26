@@ -1,0 +1,15 @@
+"Visit","Feature","Final_cluster","Risk_group","Z_value"
+5,"serBilir",2,"Lower-risk trajectory",-0.332007468710001
+5,"serChol",2,"Lower-risk trajectory",-0.384276062684549
+5,"albumin",2,"Lower-risk trajectory",0.100498443320764
+5,"alkaline",2,"Lower-risk trajectory",-0.506174735414696
+5,"SGOT",2,"Lower-risk trajectory",-0.373990504425033
+5,"platelets",2,"Lower-risk trajectory",0.00589497010496795
+5,"prothrombin",2,"Lower-risk trajectory",0.154759398762983
+5,"serBilir",1,"Higher-risk trajectory",1.41592304182935
+5,"serChol",1,"Higher-risk trajectory",0.630834520861819
+5,"albumin",1,"Higher-risk trajectory",-0.934279042531464
+5,"alkaline",1,"Higher-risk trajectory",0.295779452302691
+5,"SGOT",1,"Higher-risk trajectory",1.25554049621765
+5,"platelets",1,"Higher-risk trajectory",-0.824268295356438
+5,"prothrombin",1,"Higher-risk trajectory",0.747203343971891

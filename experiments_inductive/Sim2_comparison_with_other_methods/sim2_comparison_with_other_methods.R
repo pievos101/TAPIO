@@ -3061,7 +3061,7 @@ plot_data$scenario_plot <- factor(
         "nuisance100"
     ),
     labels = c(
-        "Standard",
+        "Regular visits",
         "Irregular visits",
         "High noise",
         "Imbalanced clusters",

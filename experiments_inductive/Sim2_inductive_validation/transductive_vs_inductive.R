@@ -322,9 +322,6 @@ make_stratified_split <- function(
     train_frac,
     seed
 ) {
-
-    set.seed(seed)
-
     TRAIN_SUBJECTS <- integer(0)
 
 
@@ -380,9 +377,6 @@ bootstrap_mean_ci <- function(
     x <- x[
         is.finite(x)
     ]
-
-    set.seed(seed)
-
     n <- length(x)
 
     BOOT <- numeric(B)
@@ -672,12 +666,6 @@ for(ii in seq_len(N_RUNS)) {
     # =========================================================================
     # 12.1 SIMULATION PARAMETERS
     # =========================================================================
-
-    set.seed(
-        1000 + ii
-    )
-
-
     r_sigma_diag <- rep(
         BASE_SIGMA,
         SET_N_FEATURES
@@ -854,13 +842,6 @@ for(ii in seq_len(N_RUNS)) {
     cat(
         "  Original transductive longTAPIO..."
     )
-
-
-    set.seed(
-        100000 + ii
-    )
-
-
     t0 <- proc.time()[3]
 
 
@@ -1049,13 +1030,6 @@ for(ii in seq_len(N_RUNS)) {
     cat(
         "  Inductive longTAPIO training..."
     )
-
-
-    set.seed(
-        200000 + ii
-    )
-
-
     t0 <- proc.time()[3]
 
 

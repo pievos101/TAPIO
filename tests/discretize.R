@@ -36,7 +36,6 @@ outside <- withCallingHandlers(
 stopifnot(warned, identical(outside$DATA, new$DATA))
 
 # Installed-package integration: irregular cohort -> frozen windows -> fit/predict.
-set.seed(42)
 dat <- simLongData(n_total=20, ranTimes=TRUE)
 wide <- reshape(dat, idvar=c("subject","time","cluster"),
                 timevar="outcome", direction="wide")

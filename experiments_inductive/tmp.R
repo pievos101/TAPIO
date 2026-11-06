@@ -418,11 +418,6 @@ simulate_irregular_benchmark <- function(
         scenario,
         SCENARIOS
     )
-
-
-    set.seed(seed)
-
-
     # -------------------------------------------------------------------------
     # Balanced clusters
     # -------------------------------------------------------------------------
@@ -1296,10 +1291,6 @@ fit_longTAPIO <- function(
     representation,
     seed
 ) {
-
-    set.seed(seed)
-
-
     X <- representation$X
 
 

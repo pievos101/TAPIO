@@ -306,12 +306,6 @@ make_stratified_split <- function(
     train_frac,
     seed
 ) {
-
-    set.seed(
-        seed
-    )
-
-
     TRAIN_SUBJECTS <- integer(0)
 
 
@@ -372,13 +366,6 @@ bootstrap_mean_ci <- function(
     x <- x[
         is.finite(x)
     ]
-
-
-    set.seed(
-        seed
-    )
-
-
     n <- length(
         x
     )
@@ -625,13 +612,6 @@ for(ETA_NOW in ETA_VALUES) {
                 ETA_NOW * 1000 +
                 SIGMA_NOW * 100 +
                 ii
-
-
-            set.seed(
-                SIM_SEED
-            )
-
-
             # =================================================================
             # 13.2 SUBJECT HETEROGENEITY
             #
@@ -782,13 +762,6 @@ for(ETA_NOW in ETA_VALUES) {
             cat(
                 "Transductive..."
             )
-
-
-            set.seed(
-                600000 + GLOBAL_RUN
-            )
-
-
             t0 <- proc.time()[3]
 
 
@@ -910,13 +883,6 @@ for(ETA_NOW in ETA_VALUES) {
             cat(
                 "Inductive training..."
             )
-
-
-            set.seed(
-                700000 + GLOBAL_RUN
-            )
-
-
             t0 <- proc.time()[3]
 
 

@@ -1,11 +1,8 @@
 library(iTAPIO)
-
-set.seed(42)
 x <- as.matrix(iris[, 1:4])
 train <- unlist(lapply(split(seq_len(nrow(x)), iris$Species), function(i) sample(i, 35)))
 new <- x[-train, , drop=FALSE]
 for (pc in c("random_weighted", "first")) {
-    set.seed(8)
     fit <- TAPIO(x[train, ], k=3, levels=3, n_trees=15, pca_selection=pc)
     frozen <- serialize(fit, NULL)
     pred <- predict(fit, new)
@@ -16,8 +13,6 @@ for (pc in c("random_weighted", "first")) {
               identical(serialize(fit, NULL), frozen),
               all(is.finite(importance(fit))))
 }
-
-set.seed(42)
 dat <- simLongData(n_total=20, ranTimes=FALSE, n_i=5)
 wide <- reshape(dat, idvar=c("subject","time","cluster"), timevar="outcome", direction="wide")
 wide <- wide[order(wide$subject, wide$time), ]

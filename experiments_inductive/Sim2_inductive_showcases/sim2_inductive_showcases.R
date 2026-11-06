@@ -513,12 +513,6 @@ make_stratified_split <- function(
     train_fraction = 0.70,
     seed = 1
 ) {
-
-    set.seed(
-        seed
-    )
-
-
     train_idx <- integer(
         0
     )
@@ -654,12 +648,6 @@ fit_training_longTAPIO <- function(
     X_train,
     seed
 ) {
-
-    set.seed(
-        seed
-    )
-
-
     P <- dim(
         X_train
     )[3]
@@ -736,12 +724,6 @@ run_progressive_benchmark <- function(
     # =========================================================================
     # SIMULATE REGULAR LONGITUDINAL DATA
     # =========================================================================
-
-    set.seed(
-        data_seed
-    )
-
-
     dat <- simLongData(
         n_total = N_TOTAL,
         K = K,

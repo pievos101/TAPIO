@@ -4,3 +4,4 @@
 ^\.Rhistory$
 ^TAPIO\.(pdf|svg)$
 ^pic\.jpg$
+^data-raw$

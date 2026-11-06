@@ -33,7 +33,6 @@
 # =============================================================================
 
 library(iTAPIO)
-library(DynForest)
 library(survival)
 library(survminer)
 library(ggplot2)
@@ -57,8 +56,6 @@ if(!exists("importance")) {
 # =============================================================================
 # 2. SETTINGS
 # =============================================================================
-
-SEED <- 42
 
 K <- 2
 
@@ -101,7 +98,7 @@ LOG_FEATURES <- c(
 
 data(
     pbc2,
-    package = "DynForest"
+    package = "iTAPIO"
 )
 
 
@@ -781,15 +778,8 @@ array_to_longTAPIO <- function(X) {
 
 make_split <- function(
     event,
-    train_fraction,
-    seed
+    train_fraction
 ) {
-
-    set.seed(
-        seed
-    )
-
-
     train_idx <- integer(0)
 
 
@@ -844,9 +834,7 @@ SPLIT <- make_split(
 
     event = PATIENT_DATA$event,
 
-    train_fraction = TRAIN_FRACTION,
-
-    seed = SEED
+    train_fraction = TRAIN_FRACTION
 )
 
 
@@ -963,13 +951,6 @@ N_FEATURES_TREE <- min(
     N_FEATURES_TREE,
     length(FEATURES)
 )
-
-
-set.seed(
-    1002
-)
-
-
 MODEL <- longTAPIO(
 
     DATA = TRAIN_PREP$DATA,
@@ -2753,6 +2734,9 @@ write.csv(
     row.names = FALSE
 )
 
+
+write.csv(TRAIN_SURVIVAL, "PBC2_training_risk_groups.csv", row.names = FALSE)
+write.csv(TEST_SURVIVAL, "PBC2_test_risk_groups.csv", row.names = FALSE)
 
 # =============================================================================
 # 29. SAVE FIGURES

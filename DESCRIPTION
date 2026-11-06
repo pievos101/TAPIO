@@ -12,6 +12,7 @@ Description: Inductive clustering with ensembles of principal component trees fo
     visit-wise feature importance.
 License: GPL (>= 3)
 LazyLoad: yes
+LazyData: true
 Encoding: UTF-8
-Suggests: aricode
+Suggests: aricode, survival, survminer
 Config/roxygen2/version: 8.1.0

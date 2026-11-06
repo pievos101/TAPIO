@@ -361,10 +361,6 @@ simulate_irregular_benchmark <- function(
         scenario,
         SCENARIOS
     )
-
-    set.seed(seed)
-
-
     # -------------------------------------------------------------------------
     # Balanced true clusters
     # -------------------------------------------------------------------------
@@ -544,9 +540,6 @@ make_train_test_split <- function(
     train_fraction = TRAIN_FRAC,
     seed = 1
 ) {
-
-    set.seed(seed)
-
     train_ids <- integer(0)
 
     for (g in sort(unique(truth))) {
@@ -992,9 +985,6 @@ fit_longTAPIO_window <- function(
     seed = NULL
 ) {
 
-    if (!is.null(seed)) {
-        set.seed(seed)
-    }
 
 
     X <- representation$X

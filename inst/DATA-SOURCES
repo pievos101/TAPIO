@@ -1,0 +1,25 @@
+Bundled datasets
+================
+
+pbc2
+----
+Unmodified pbc2 data from DynForest 1.2.0, distributed under LGPL (>= 3).
+Source: https://github.com/cran/DynForest
+Commit: 7c7d489e560bb0810b18b68ff05c7e073b8ce1e2
+File: data/pbc2.RData
+DynForest authors: Anthony Devaux, Robin Genuer, Cecile Proust-Lima,
+and Louis Capitaine. Upstream dataset documentation credits joineRML
+and the Mayo Clinic PBC study. Dataset variable descriptions are adapted
+from DynForest's dataset documentation.
+
+iris
+----
+Unmodified datasets::iris from R 4.5.3 (R Core Team and contributors).
+Measurements collected by Edgar Anderson (1935); described by R. A. Fisher
+(1936), "The use of multiple measurements in taxonomic problems",
+Annals of Eugenics 7, 179-188, doi:10.1111/j.1469-1809.1936.tb02137.x.
+
+The dataset sources are retained here for attribution; bundling creates no
+runtime dependency on DynForest. R's datasets package is part of R, released
+under GPL (>= 2). Applicable GNU license texts are provided with R in
+share/licenses (GPL-2, GPL-3, LGPL-3).

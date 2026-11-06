@@ -216,10 +216,6 @@ simulate_benchmark <- function(
 ) {
 
     scenario <- match.arg(scenario)
-
-    set.seed(seed)
-
-
     # =========================================================================
     # SCENARIO SETTINGS
     # =========================================================================
@@ -1014,9 +1010,6 @@ fit_longTAPIO_mode <- function(
     seed = NULL
 ) {
 
-    if (!is.null(seed)) {
-        set.seed(seed)
-    }
 
 
     X <- representation$X

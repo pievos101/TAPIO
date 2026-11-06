@@ -7,7 +7,6 @@ if (mode == "main") {
     library(iTAPIO, lib.loc=args[2])
 }
 d <- readRDS(args[3])
-set.seed(1000 + d$seed)
 
 if (mode == "main") {
     elapsed <- system.time({
@@ -44,7 +43,7 @@ if (mode == "main") {
     })[["elapsed"]]
 }
 stopifnot(length(predicted)==length(d$truth), !anyNA(predicted), !anyNA(d$truth))
-result <- data.frame(case=d$case, seed=d$seed, method=mode,
+result <- data.frame(case=d$case, eta=d$eta, replicate=d$replicate, method=mode,
                      n_train=d$n_train, n_test=length(d$truth),
                      ARI=aricode::ARI(d$truth, predicted),
                      NMI=aricode::NMI(d$truth, predicted),

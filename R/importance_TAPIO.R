@@ -5,9 +5,10 @@
 
 #' @rdname inductive
 #' @export
-importance_TAPIO_inductive <- function(
+importance.inductiveTAPIO <- function(
     res,
-    normalize = TRUE
+    normalize = TRUE,
+    ...
 ) {
 
     # ==================================================================

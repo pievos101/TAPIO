@@ -1,4 +1,4 @@
-#' Inductive TAPIO fitting, prediction and feature importance
+#' iTAPIO fitting, prediction and feature importance
 #'
 #' Fit frozen PCA-tree ensembles on complete numeric training data and predict
 #' cluster assignments for new samples or visit prefixes from new patients.
@@ -26,7 +26,7 @@
 #'   one to the training visit count. Each new patient needs at least this many.
 #' @param res Fitted inductive model for importance calculation.
 #' @param normalize Normalize importance by its largest value.
-#' @param ... Additional arguments; currently unused by prediction methods.
+#' @param ... Additional arguments passed to importance methods, or unused by prediction methods.
 #' @return Fitters return models of class inductiveTAPIO or inductiveLongTAPIO,
 #'   with cluster, train_clusters, trees, affinity and distance. Predictions return
 #'   cluster, cluster_scores, margin, confidence (an alias for margin) and affinity;

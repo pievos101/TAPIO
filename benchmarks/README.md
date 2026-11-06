@@ -9,7 +9,7 @@ and the exact same generated dataset and held-out IDs as its counterpart.
 
 - Baseline: untouched `main` commit `d281950a7ecfe2ac329d60853141b1ff31de9a7c`,
   package version 1.2. All 219 source files were verified against their Git blobs.
-- Inductive: the local version 1.3 package based on `inductive` commit
+- Inductive: the version 1.3 package based on `inductive` commit
   `acf2d56bf44781343596fe391d367ab0b0397791`, with the package changes in this review.
 - Seeds 1–10; 100 trees; 3 hierarchy levels; 2 features per tree;
   `pca_selection = "random_weighted"`; Ward.D2 linkage; feature sampling with replacement.
@@ -93,6 +93,10 @@ Rscript --vanilla benchmarks/run.R /tmp/tapio-main-lib /tmp/tapio-inductive-lib 
 per method in isolated R processes. A worker failure stops the run; no failed fits
 are silently dropped. The output directory contains the generated datasets, logs,
 raw metrics, summaries, and session information.
+
+The recorded results predate the package rename to `iTAPIO`; fitting algorithms
+are unchanged. The runner now loads `iTAPIO` for the inductive worker and `TAPIO`
+for the untouched main baseline.
 
 ## Package validation
 

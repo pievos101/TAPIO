@@ -1,13 +1,15 @@
-Package: TAPIO
+Package: iTAPIO
 Type: Package
-Title: Hierarchical Clustering with an Ensemble of Principal Component Trees for Interpretable Patient Stratification
+Title: Inductive Clustering with Principal Component Trees
 Version: 1.3
 Date: 2026-11-06
 Author: Bastian Pfeifer and Markus Loecher
 Maintainer: Bastian Pfeifer <bastianxpfeifer@gmail.com>
 Depends: R (>= 3.5.0)
 Imports: cluster, fastcluster, MASS, dplyr, ggplot2, zoo, stats
-Description: Hierarchical Clustering with an Ensemble of Principle Component Trees for Interpretable Patient Stratification.
+Description: Inductive clustering with ensembles of principal component trees for
+    new samples and longitudinal patients, including progressive assignment and
+    visit-wise feature importance.
 License: GPL (>= 3)
 LazyLoad: yes
 Encoding: UTF-8

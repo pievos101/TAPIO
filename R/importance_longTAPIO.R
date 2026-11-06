@@ -5,11 +5,12 @@
 
 #' @rdname inductive
 #' @export
-importance_longTAPIO_inductive <- function(
+importance.inductiveLongTAPIO <- function(
     res,
     newdata = NULL,
     user_id = NULL,
-    normalize = TRUE
+    normalize = TRUE,
+    ...
 ) {
 
     # ==================================================================

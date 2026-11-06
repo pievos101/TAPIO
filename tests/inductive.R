@@ -1,4 +1,4 @@
-library(TAPIO)
+library(iTAPIO)
 
 set.seed(42)
 x <- as.matrix(iris[, 1:4])
@@ -14,7 +14,7 @@ for (pc in c("random_weighted", "first")) {
               identical(pred$cluster[1], predict(fit, new[1,,drop=FALSE])$cluster),
               identical(predict(unserialize(frozen), new), pred),
               identical(serialize(fit, NULL), frozen),
-              all(is.finite(importance_TAPIO_inductive(fit))))
+              all(is.finite(importance(fit))))
 }
 
 set.seed(42)
@@ -35,8 +35,13 @@ for (pc in c("random_weighted", "first", "random_weighted_95")) {
                   identical(pred$cluster[1], predict(fit, x[ids==17, ], ids[ids==17], visits=visits)$cluster))
     }
     stopifnot(identical(serialize(fit, NULL), frozen),
-              all(is.finite(importance_longTAPIO_inductive(fit)$global)))
+              all(is.finite(importance(fit)$global)))
+    imp <- importance(fit, newdata=x[!training, ], user_id=ids[!training])
+    stopifnot(identical(dim(imp$patient), c(4L, 5L, 5L)),
+              all(is.finite(imp$patient)),
+              identical(as.integer(imp$predicted_cluster[, 5]), as.integer(pred$cluster)))
 }
+stopifnot(inherits(try(importance(list()), silent=TRUE), "try-error"))
 stopifnot(eval(formals(TAPIO)$pca_selection)[1]=="random_weighted",
           eval(formals(longTAPIO)$pca_selection)[1]=="random_weighted")
 cat("Inductive package integration tests passed.\n")

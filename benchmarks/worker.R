@@ -1,7 +1,11 @@
 # One package per fresh process, avoiding namespace collisions between libraries.
 args <- commandArgs(TRUE)
 mode <- args[1]
-library(TAPIO, lib.loc=args[2])
+if (mode == "main") {
+    library(TAPIO, lib.loc=args[2])
+} else {
+    library(iTAPIO, lib.loc=args[2])
+}
 d <- readRDS(args[3])
 set.seed(1000 + d$seed)
 

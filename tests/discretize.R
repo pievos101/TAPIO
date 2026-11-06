@@ -1,4 +1,4 @@
-library(TAPIO)
+library(iTAPIO)
 
 # Fixed windows: aggregate duplicates, interpolate interior gaps, include upper edge.
 x <- data.frame(marker=c(2, 4, 8, 10, 20, 26))

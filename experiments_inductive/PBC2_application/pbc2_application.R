@@ -32,7 +32,7 @@
 # 0. PACKAGES
 # =============================================================================
 
-library(TAPIO)
+library(iTAPIO)
 library(DynForest)
 library(survival)
 library(survminer)
@@ -45,12 +45,12 @@ library(aricode)
 # =============================================================================
 
 if(!exists("longTAPIO")) {
-    stop("Please install and load the inductive TAPIO package first.")
+    stop("Please install and load the iTAPIO package first.")
 }
 
 
-if(!exists("importance_longTAPIO_inductive")) {
-    stop("Please install and load the inductive TAPIO package first.")
+if(!exists("importance")) {
+    stop("Please install and load the iTAPIO package first.")
 }
 
 
@@ -1257,7 +1257,7 @@ print(
 # 14. INDUCTIVE TEST ASSIGNMENT + IMPORTANCE
 # =============================================================================
 
-IMP <- importance_longTAPIO_inductive(
+IMP <- iTAPIO::importance(
 
     res = MODEL,
 

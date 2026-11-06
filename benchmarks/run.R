@@ -8,7 +8,7 @@ reps <- if (length(args)>=4L) as.integer(args[4]) else 10L
 stopifnot(reps>=1L)
 dir.create(output, recursive=TRUE, showWarnings=FALSE)
 output <- normalizePath(output)
-library(TAPIO, lib.loc=inductive_lib)
+library(iTAPIO, lib.loc=inductive_lib)
 Sys.setenv(OPENBLAS_NUM_THREADS="1", OMP_NUM_THREADS="1")
 rscript <- file.path(R.home("bin"), "Rscript")
 worker <- normalizePath("benchmarks/worker.R")
@@ -86,9 +86,9 @@ summary <- merge(means,sds,by=c("case","method"))
 write.csv(summary,file.path(output,"summary.csv"),row.names=FALSE)
 capture.output(sessionInfo(), file=file.path(output,"sessionInfo.txt"))
 versions <- data.frame(
-    component=c("main TAPIO", "inductive TAPIO", "aricode", "fastcluster"),
+    component=c("main TAPIO", "inductive iTAPIO", "aricode", "fastcluster"),
     version=c(as.character(packageVersion("TAPIO", lib.loc=main_lib)),
-              as.character(packageVersion("TAPIO", lib.loc=inductive_lib)),
+              as.character(packageVersion("iTAPIO", lib.loc=inductive_lib)),
               as.character(packageVersion("aricode")),
               as.character(packageVersion("fastcluster")))
 )

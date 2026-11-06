@@ -20,6 +20,7 @@
 #' rho_b <- diag(3) # identity correlation matrix for simplicity
 #' curve <- generate_random_curve(times, rho_b = rho_b)
 #'
+#' @importFrom MASS mvrnorm
 #' @export
 
 

@@ -3,6 +3,8 @@
 # ======================================================================
 
 
+#' @rdname inductive
+#' @export
 importance_longTAPIO_inductive <- function(
     res,
     newdata = NULL,
@@ -20,7 +22,7 @@ importance_longTAPIO_inductive <- function(
     )) {
 
         stop(
-            "res must be returned by longTAPIO_inductive()."
+            "res must be returned by longTAPIO()."
         )
     }
 
@@ -69,7 +71,7 @@ importance_longTAPIO_inductive <- function(
                     "Tree ",
                     b,
                     " contains no feature_contribution. ",
-                    "Refit with the revised longTAPIO_inductive()."
+                    "Refit with the revised longTAPIO()."
                 )
             )
         }

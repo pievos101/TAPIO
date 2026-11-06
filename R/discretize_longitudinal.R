@@ -36,6 +36,14 @@
 #'   after the last observed window are filled using the nearest available
 #'   value. If \code{FALSE}, they remain \code{NA}. Default is \code{TRUE}.
 #'
+#' @details Observations outside the window range are ignored with a warning.
+#'   The final upper boundary is included in the last window. Subjects retain
+#'   their order of first appearance; output rows follow increasing window order
+#'   within each subject. A feature with no finite observations for a subject
+#'   remains missing even with interpolation. For prospective predictions, supply
+#'   only measurements available at the prediction time; interpolation can use
+#'   later observations supplied for the same subject.
+#'
 #' @return An object of class \code{"TAPIO_discretized"} containing:
 #' \describe{
 #'   \item{DATA}{Discretized longitudinal data.}
@@ -47,34 +55,23 @@
 #'   \item{n_windows}{Number of windows.}
 #'   \item{empty_fraction}{Fraction of subject-windows that were empty
 #'     before interpolation.}
+#'   \item{empty_windows}{Logical subject-by-window matrix before interpolation.}
+#'   \item{array}{Subject-by-window-by-feature array after optional interpolation.}
+#'   \item{call}{The matched function call.}
 #' }
 #'
 #' @examples
-#' \dontrun{
-#'
-#' # Reference cohort
-#' disc_train <- discretize_longitudinal(
-#'   DATA = X_train,
-#'   user_id = id_train,
-#'   time = time_train,
-#'   n_windows = 10
+#' x <- data.frame(marker = c(1, 3, 5, 2, 4, 6))
+#' ids <- rep(c("a", "b"), each = 3)
+#' times <- rep(c(0, 1, 3), 2)
+#' reference <- discretize_longitudinal(x, ids, times, n_windows = 3)
+#' new_patient <- discretize_longitudinal(
+#'   data.frame(marker = c(10, 14)), c("c", "c"), c(0, 3),
+#'   breaks = reference$breaks
 #' )
+#' new_patient$DATA
 #'
-#' fit <- longTAPIO_inductive(
-#'   DATA = disc_train$DATA,
-#'   user_id = disc_train$user_id,
-#'   k = 4
-#' )
-#'
-#' # New patients: use exactly the same windows
-#' disc_test <- discretize_longitudinal(
-#'   DATA = X_test,
-#'   user_id = id_test,
-#'   time = time_test,
-#'   breaks = disc_train$breaks
-#' )
-#' }
-#'
+#' @importFrom stats approx
 #' @export
 discretize_longitudinal <- function(
   DATA,

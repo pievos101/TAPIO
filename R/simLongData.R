@@ -2,7 +2,7 @@
 #'
 #' Generates multivariate longitudinal data with a specified number of clusters,
 #' noise level, and time structure. Can simulate either fixed or random observation times.
-#' A default run will create sth. VERY close to \code{\link{LongDat}}
+#' A default run will create sth. VERY close to a regularly sampled cohort
 #'
 #' @param n_total Integer. Total number of subjects to simulate. Default is 200.
 #' @param K Integer. Number of underlying clusters to simulate. Default is 4.
@@ -12,8 +12,9 @@
 #'        Default is equal cluster sizes.
 #' @param ranTimes Logical. If \code{TRUE}, simulate random time points per subject; otherwise, use fixed time grid.
 #'        Default is \code{TRUE}.
-#' @param n_i Integer. Number of fixed time points per subject (only used if \code{ranTimes = FALSE}). Default is 12.
+#' @param n_i Integer. Number of fixed time points per subject (only used if \code{ranTimes = FALSE}). Default is 10.
 #'
+#' @param sigma_diag Numeric vector of length outcomes, scaling subject-level variation.
 #' @return A data frame with the following columns:
 #' \describe{
 #'   \item{\code{subject}}{Integer. Subject ID (1 to \code{n_total}).}
@@ -34,6 +35,7 @@
 #' sim_data <- simLongData()
 #' head(sim_data)
 #'
+#' @importFrom stats rnorm runif
 #' @export
 
 

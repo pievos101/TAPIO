@@ -1,13 +1,18 @@
 
+#' Legacy interpolation of five longitudinal outcomes
+#'
+#' Interpolates five outcomes onto times 1 through 10. For irregular-time
+#' inductive workflows use discretize_longitudinal() with frozen training breaks.
+#' @param Longdat2_wide Data frame with subject, time, cluster, then five outcomes.
+#' @return A data frame containing subject, time, cluster and interpolated outcomes.
+#' @export
 TimeAlign_interpolate = function(Longdat2_wide){
-require(zoo)
 
 y = Longdat2_wide[,4:ncol(Longdat2_wide)]
 old_t = Longdat2_wide$time
 #we first transfer the observations to the same times!
 #quantile(Longdat$Dat$obs, p = seq(0,1,length=11))
 interPolateTS = function(y, old_t, new_t = 1:10){
-  library(zoo)
   y_ts = zoo(y, old_t)
   z_ts = zoo(order.by = new_t*1.0)
   # Merge series into one object

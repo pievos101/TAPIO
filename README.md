@@ -1,162 +1,170 @@
-# TAPIO and longTAPIO
-<p align="center">
-<img src="https://github.com/pievos101/TAPIO/blob/main/pic.jpg" width="400">
-</p>
+# TAPIO — inductive clustering
 
-## Required packages
-TAPIO depends on the packages NbClust, fastcluster, and 
-FactoMineR.
+This branch packages the inductive TAPIO and longTAPIO implementations. Fit an
+ensemble with `TAPIO()` or `longTAPIO()`, then use `predict()` without refitting.
+The core strength is visit-wise assignment for early risk stratification, with
+patient- and visit-wise feature importance.
 
-## Installation
-TAPIO can be installed using the package devtools.
+## Install
 
-```{r}
-install.packages("devtools")
-library(devtools)
+From this checkout:
 
-devtools::install_github("pievos101/TAPIO")
+```sh
+R CMD INSTALL .
+```
+
+Install the `inductive` branch from GitHub:
+
+```r
+install.packages("remotes")
+remotes::install_github("pievos101/TAPIO", ref = "inductive")
+```
+
+For the evaluation examples, install `aricode` once with
+`install.packages("aricode")`.
+
+## TAPIO: new samples
+
+```r
 library(TAPIO)
+set.seed(42)
+x <- as.matrix(iris[, 1:4])
+train <- unlist(lapply(split(seq_len(nrow(x)), iris$Species),
+                       function(i) sample(i, 35)))
+
+fit <- TAPIO(x[train, ], k = 3, n_trees = 100, levels = 3)
+fit$cluster                    # training assignments
+pred <- predict(fit, x[-train, , drop = FALSE])
+pred$cluster                   # new sample assignments
+c(ARI = aricode::ARI(iris$Species[-train], pred$cluster),
+  NMI = aricode::NMI(iris$Species[-train], pred$cluster))
+importance_TAPIO_inductive(fit)
 ```
 
-## Clustering using TAPIO
+`random_weighted` is the default PCA selection. Use `pca_selection = "first"`
+for PC1. Keep feature names and order identical at prediction time. Estimate
+external preprocessing on the training data and reuse it for new data.
 
-```{r}
-library(TAPIO)
+## longTAPIO: irregular times require discretization
 
-data(iris)
-D = iris[,1:4]
+**For irregular observation times, preprocess with `discretize_longitudinal()`
+before fitting or predicting.** Estimate the time windows on training patients
+only and reuse `reference$breaks` for new patients. This produces a common,
+chronologically ordered representation with equal windows per patient.
 
-# custom function to implement min max scaling
-minMax <- function(x) {
-  (x - min(x, na.rm=TRUE)) / (max(x, na.rm=TRUE) - min(x, na.rm=TRUE))
-}
+```r
+set.seed(42)
+long <- simLongData(n_total = 40, ranTimes = TRUE)
+wide <- reshape(long, idvar = c("subject", "time", "cluster"),
+                timevar = "outcome", direction = "wide")
+xlong <- as.matrix(wide[, grep("^y\\.", names(wide))])
+patients <- unique(wide[, c("subject", "cluster")])
+train_ids <- unlist(lapply(split(patients$subject, patients$cluster),
+                          function(ids) ids[1:8]))
+training <- wide$subject %in% train_ids
 
-D_norm = as.data.frame(lapply(D, minMax))
-D_norm = as.matrix(D_norm)
-
-outcome = iris[,5]
-
-res = TAPIO(D_norm, k=3, n_trees=1000, levels=3, pca_selection="random_weighted")
-
-# Check the performance of clustering
-library(aricode)
-
-ARI(res$cl, outcome)
-
-```
-
-## Feature importance
-
-```{r}
-
-fimp = importance(res)
-
-rownames(fimp) = unique(outcome)
-colnames(fimp) = colnames(iris)[1:4]
-
-fimp
-
-```
-
-## Clustering longitudinal data using TAPIO
-
-Generating some synthetic longitudinal data with regular time measures.
-
-```{r}
-library(TAPIO)
-
-Longdat = simLongData(ranTimes = FALSE)
-head(Longdat)
-
-```
-The data must be reorganized for longTAPIO.
-
-```{r}
-
-Longdat_wide <- reshape(
-    Longdat,
-    idvar = c("subject", "time", "cluster"),  # columns that identify each row
-    timevar = "outcome",                      # the variable that will become columns
-    direction = "wide"
+reference <- discretize_longitudinal(
+    xlong[training, ], user_id = wide$subject[training],
+    time = wide$time[training], n_windows = 5
 )
-
-head(Longdat_wide)
-
-true_labels = unique(Longdat_wide[,c("subject","cluster")])[,"cluster"]
-
-```
-Now we run longTAPIO_sample
-
-```{r}
-DD = as.matrix(Longdat_wide[,4:ncol(Longdat_wide)]) # get the feature matrix
-rownames(DD) = sort(rep(1:200, 10)) # set rownames according to the subjects
-    
-res_sample = longTAPIO_sample(DD, k = 4, 
-                            levels=4, n_trees=1000,
-                            pca_selection="random_weighted")
-
-# Get the clustering solution
-res_sample$cl
-
-# Check performance
-ARI(res_sample$cl, true_labels)
-
-```
-
-Now we run longTAPIO_trajectories
-```{r}
-DD = as.matrix(Longdat_wide[,4:ncol(Longdat_wide)])
-
-res_trajectories = longTAPIO_trajectories(DD, k = 4, 
-                         user_id = Longdat_wide$subject, 
-                         levels=4, verbose = 1, n_trees=1000,
-                         pca_selection="random_weighted")
-
-# Get the clustering solution 
-res_trajectories$cl
-
-
-# Check performance
-ARI(res_trajectories$cl, true_labels)
-```
-
-Let's generate some longitudinal data with irregeular temporal measures
-
-```{r}
-Longdat = simLongData(ranTimes = TRUE)
-head(Longdat)
-
-```
-The data must be reorganized for longTAPIO.
-
-```{r}
-
-Longdat_wide <- reshape(
-    Longdat,
-    idvar = c("subject", "time", "cluster"),  # columns that identify each row
-    timevar = "outcome",                      # the variable that will become columns
-    direction = "wide"
+new_patients <- discretize_longitudinal(
+    xlong[!training, ], user_id = wide$subject[!training],
+    time = wide$time[!training], breaks = reference$breaks
 )
+reference$empty_fraction        # empty patient-windows before interpolation
+stopifnot(all(is.finite(as.matrix(reference$DATA))),
+          all(is.finite(as.matrix(new_patients$DATA))))
 
-head(Longdat_wide)
+long_fit <- longTAPIO(reference$DATA, user_id = reference$user_id,
+                               k = 4, levels = 3, n_trees = 100)
+long_pred <- predict(long_fit, new_patients$DATA, user_id = new_patients$user_id)
+truth <- patients$cluster[match(long_pred$patients, patients$subject)]
+c(ARI = aricode::ARI(truth, long_pred$cluster),
+  NMI = aricode::NMI(truth, long_pred$cluster))
 
-true_labels = unique(Longdat_wide[,c("subject","cluster")])[,"cluster"]
+long_imp <- importance_longTAPIO_inductive(
+    long_fit, newdata = new_patients$DATA, user_id = new_patients$user_id
+)
+long_imp$global
 ```
 
-Now we run longTAPIO_MLD.
+Discretization averages observations within windows, interpolates missing values,
+and by default fills edges with the nearest observed value. `fill_empty = FALSE`
+keeps empty values; `extrapolate = FALSE` leaves unobserved edges missing. A
+patient-feature with no finite observations remains missing. Inductive models
+require complete numeric inputs, so inspect the result before fitting. Values
+outside the training window range are ignored with a warning.
 
-```{r}
-# longTAPIO_MLD
-res_MLD = longTAPIO_MLD(as.matrix(Longdat_wide[,4:ncol(Longdat_wide)]),
-                user_id =  Longdat_wide$subject, 
-                obsTimes =  Longdat_wide$time,
-                k=4, levels=4, n_trees=30,
-                pca_selection="first")
+Regular data already aligned to the same visit positions can be supplied directly.
+Training needs equal visit counts per patient and chronological within-patient
+row order. The fitter itself does not use observation times.
 
-# Get the clustering solution 
-res_MLD$cl
+## Predict from early histories
 
-# Check performance
-ARI(res_MLD$cl, true_labels)
+Use only measurements available at the cutoff before discretizing. Filling a
+complete trajectory and then taking its prefix could use future observations.
+
+```r
+available <- !training & wide$time <= reference$breaks[3]
+early <- discretize_longitudinal(
+    xlong[available, ], user_id = wide$subject[available],
+    time = wide$time[available], breaks = reference$breaks
+)
+prefix <- early$window <= 2
+pred_early <- predict(long_fit, early$DATA[prefix, ],
+                      user_id = early$user_id[prefix], visits = 2)
+truth_early <- patients$cluster[match(pred_early$patients, patients$subject)]
+c(ARI = aricode::ARI(truth_early, pred_early$cluster),
+  NMI = aricode::NMI(truth_early, pred_early$cluster))
 ```
 
+`visits` is the number of leading aligned visits/windows to use, up to the training
+count. Prediction returns sorted `patients`, `cluster`, `cluster_scores`, and
+`margin`. Scores and margins are affinities, not calibrated probabilities.
+Patients without available measurements need more data before prediction.
+
+## PBC2: visit-wise risk assignment and feature importance
+
+The [PBC2 application](experiments_inductive/PBC2_application/pbc2_application.R)
+uses two trajectory clusters, characterizes risk using training survival, and
+assigns held-out patients after visits 1–5. Biomarker importance is available for
+each patient and visit. Using the importance result from the example above:
+
+```r
+long_imp$predicted_cluster[, 2]       # assignments after the first two visits
+long_imp$patient[, , 2]              # patient-by-biomarker importance at visit 2
+long_imp$cluster_progressive[, , 2]   # importance grouped by final cluster
+```
+
+The full application needs `DynForest`, `survival`, `survminer`, `ggplot2`, and
+`aricode`. Its early-versus-final ARI/NMI measure assignment stability; survival
+analysis characterizes risk. For irregular elapsed times, discretize first using
+fixed training boundaries, as above.
+
+## Interpretation and model storage
+
+ARI and NMI compare predicted clusters with reference labels independently of
+cluster numbering; both reach 1 for perfect agreement. ARI is adjusted for chance
+and can be negative. NMI ranges from 0 to 1. Labels are used only for evaluation.
+
+Both fitters default to `pca_selection = "random_weighted"`. Longitudinal fitting
+also supports `"random_weighted_95"`. Choose `levels` smaller than the training
+sample/patient count, and specify the desired cluster count with `k`.
+
+Save models with `saveRDS()` and restore them with `readRDS()`. For longitudinal
+use, also retain the training discretization breaks and preprocessing settings.
+The original transductive API remains on `main`; this branch exposes the existing
+inductive function names directly.
+
+## Validation and comparison with main
+
+```sh
+Rscript --vanilla tests/inductive.R
+Rscript --vanilla tests/discretize.R
+R CMD build .
+R CMD check --no-manual TAPIO_1.3.tar.gz
+```
+
+See [benchmarks/README.md](benchmarks/README.md) for the reproducible accuracy and
+runtime comparison with the untouched `main` package, including ARI/NMI on shared
+held-out samples and patients.

@@ -10,7 +10,7 @@
 #       -> randomly select PC according to explained variance
 #
 # DEFAULT:
-#   pca_selection = "first"
+#   pca_selection = "random_weighted"
 #
 # ======================================================================
 
@@ -226,7 +226,9 @@
 # FIT
 # ======================================================================
 
-longTAPIO_inductive <- function(
+#' @rdname inductive
+#' @export
+longTAPIO <- function(
     DATA,
     user_id,
     k = 4,
@@ -237,8 +239,8 @@ longTAPIO_inductive <- function(
     scale = TRUE,
     replace = TRUE,
     pca_selection = c(
-        "first",
         "random_weighted",
+        "first",
         "random_weighted_95"
     )
 ) {
@@ -295,7 +297,7 @@ longTAPIO_inductive <- function(
     p <- ncol(DATA)
 
 
-    if(is.na(n_features)) {
+    if(is.null(n_features) || (length(n_features) == 1L && is.na(n_features))) {
 
         n_features <- max(
             1L,
@@ -1129,6 +1131,9 @@ longTAPIO_inductive <- function(
 # S3 PREDICT METHOD
 # ======================================================================
 
+#' @rdname inductive
+#' @export
+#' @importFrom stats predict
 predict.inductiveLongTAPIO <- function(
     object,
     newdata,

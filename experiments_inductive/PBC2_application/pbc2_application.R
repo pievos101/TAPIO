@@ -32,6 +32,7 @@
 # 0. PACKAGES
 # =============================================================================
 
+library(TAPIO)
 library(DynForest)
 library(survival)
 library(survminer)
@@ -43,13 +44,13 @@ library(aricode)
 # 1. CHECK longTAPIO FUNCTIONS
 # =============================================================================
 
-if(!exists("longTAPIO_inductive")) {
-    stop("Please source longTAPIO_inductive() first.")
+if(!exists("longTAPIO")) {
+    stop("Please install and load the inductive TAPIO package first.")
 }
 
 
 if(!exists("importance_longTAPIO_inductive")) {
-    stop("Please source importance_longTAPIO_inductive() first.")
+    stop("Please install and load the inductive TAPIO package first.")
 }
 
 
@@ -969,7 +970,7 @@ set.seed(
 )
 
 
-MODEL <- longTAPIO_inductive(
+MODEL <- longTAPIO(
 
     DATA = TRAIN_PREP$DATA,
 

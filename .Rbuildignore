@@ -1,0 +1,6 @@
+^experiments_inductive$
+^benchmarks$
+^\.RData$
+^\.Rhistory$
+^TAPIO\.(pdf|svg)$
+^pic\.jpg$

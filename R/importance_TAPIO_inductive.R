@@ -3,6 +3,8 @@
 # ======================================================================
 
 
+#' @rdname inductive
+#' @export
 importance_TAPIO_inductive <- function(
     res,
     normalize = TRUE
@@ -18,7 +20,7 @@ importance_TAPIO_inductive <- function(
     )) {
 
         stop(
-            "res must be returned by TAPIO_inductive()."
+            "res must be returned by TAPIO()."
         )
     }
 
@@ -75,7 +77,7 @@ importance_TAPIO_inductive <- function(
                     "Tree ",
                     b,
                     " contains no feature_contribution. ",
-                    "Refit with the revised TAPIO_inductive()."
+                    "Refit with the revised TAPIO()."
                 )
             )
         }

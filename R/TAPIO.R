@@ -23,7 +23,9 @@
 # FIT
 # ======================================================================
 
-TAPIO_inductive <- function(
+#' @rdname inductive
+#' @export
+TAPIO <- function(
     DATA,
     k = 4,
     n_features = NULL,
@@ -31,9 +33,11 @@ TAPIO_inductive <- function(
     levels = 10,
     method = "ward.D2",
     scale = FALSE,
-    replace = TRUE
+    replace = TRUE,
+    pca_selection = c("random_weighted", "first")
 ) {
 
+    pca_selection <- match.arg(pca_selection)
     DATA <- as.matrix(DATA)
 
     if(!is.numeric(DATA)) {
@@ -48,7 +52,7 @@ TAPIO_inductive <- function(
     p <- ncol(DATA)
 
 
-    if(is.null(n_features)) {
+    if(is.null(n_features) || (length(n_features) == 1L && is.na(n_features))) {
         n_features <- max(
             1L,
             floor(sqrt(p))
@@ -149,10 +153,8 @@ TAPIO_inductive <- function(
             sum(eigenvalues)
 
 
-        selected_pc <- sample(
-            seq_along(prob),
-            size = 1,
-            prob = prob
+        selected_pc <- if (pca_selection == "first") 1L else sample(
+            seq_along(prob), size = 1, prob = prob
         )
 
 
@@ -413,7 +415,7 @@ TAPIO_inductive <- function(
             replace,
 
         pca_selection =
-            "random_weighted"
+            pca_selection
     )
 
 
@@ -601,6 +603,9 @@ TAPIO_inductive <- function(
 # S3 PREDICT METHOD
 # ======================================================================
 
+#' @rdname inductive
+#' @export
+#' @importFrom stats predict
 predict.inductiveTAPIO <- function(
     object,
     newdata,

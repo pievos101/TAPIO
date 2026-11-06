@@ -9,12 +9,7 @@
 #' @return A figure yield by plotly, which mean trajectories in different colors.
 #' @import dplyr ggplot2
 #' @importFrom stats reshape
-#' @examples
-#' output = LongDataCluster(Longdat$Dat$obs,
-#'                          Longdat$Dat[,paste("y", seq(5), sep = "_")],
-#'                          Longdat$Dat$id)
-#' MeanPlot(output)
-#' @seealso #\code{\link{DendroPlot}}
+#' @importFrom MASS ginv
 #' @export
 
 
